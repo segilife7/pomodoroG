@@ -32,9 +32,14 @@
             box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
             padding: 1.5rem;
             flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
         }
         .log-section {
             overflow-y: auto;
+            text-align: left; /* 로그 섹션의 텍스트는 왼쪽 정렬 유지 */
         }
         
         @media (min-width: 768px) {
@@ -126,12 +131,18 @@
             margin-bottom: 1rem;
             box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
         }
-        /* 이미지 저장 버튼에만 특별한 색상 적용 */
         #save-image-btn {
-             background-color: #3b82f6; /* Tailwind blue-500 */
+             background-color: #3b82f6;
         }
         #save-image-btn:hover {
-             background-color: #2563eb; /* Tailwind blue-600 */
+             background-color: #2563eb;
+        }
+        /* 입력 필드 중앙 정렬 보조 */
+        .timer-input-group.w-full.max-w-xs.mx-auto label {
+            align-self: flex-start; 
+        }
+        .timer-input-group.w-full.max-w-xs.mx-auto input[type="text"] {
+             text-align: left;
         }
     </style>
 </head>
@@ -149,10 +160,11 @@
             </div>
 
             <div class="flex flex-col items-center w-full">
-                <div class="timer-input-group w-full">
+                <div class="timer-input-group w-full max-w-xs mx-auto"> 
                     <label for="activity" class="text-gray-600 mb-2">활동 내용:</label>
                     <input type="text" id="activity" placeholder="예) 문서 작업" class="w-full p-2 border-2 border-gray-300 rounded-lg focus:border-red-500">
                 </div>
+                
                 <div class="flex space-x-4 mt-4 w-full justify-center">
                     <button id="start-btn" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-6 rounded-xl transition duration-300 transform hover:scale-105 shadow-md">
                         시작
@@ -174,11 +186,9 @@
                 <label for="reflection" class="text-gray-600 mt-4 mb-2">활동 성찰:</label>
                 <textarea id="reflection" class="reflection-input" placeholder="이 세션 동안 어떤 점을 잘했고, 아쉬운 점은 무엇인가요?"></textarea>
                 
-                <button id="save-image-btn" class="w-full text-white font-bold py-2 px-6 rounded-xl transition duration-300 transform hover:scale-105 shadow-md mt-4">
-                    기록 이미지로 저장
+                <button id="complete-reflection-btn" class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-6 rounded-xl transition duration-300 transform hover:scale-105 shadow-md mt-4">
+                    성찰 완료
                 </button>
-                
-                <button id="save-btn" class="hidden">저장 (숨김)</button> 
             </div>
         </div>
         
@@ -186,6 +196,10 @@
             <h2 id="log-title" class="text-2xl font-bold text-gray-800 mb-4">나의 시간 기록</h2>
             <ul id="log-list">
                 </ul>
+            
+            <button id="save-image-btn" class="w-full text-white font-bold py-2 px-6 rounded-xl transition duration-300 transform hover:scale-105 shadow-md mt-4">
+                기록 전체 이미지로 저장
+            </button>
         </div>
     </div>
 
@@ -199,17 +213,18 @@
         const circleProgress = document.getElementById('circle-progress');
         const reflectionArea = document.getElementById('reflection-area');
         const reflectionInput = document.getElementById('reflection');
-        const saveBtn = document.getElementById('save-btn'); // 로컬 스토리지 저장용 (숨김)
-        const saveImageBtn = document.getElementById('save-image-btn'); // 이미지 저장용 (노출)
+        const completeReflectionBtn = document.getElementById('complete-reflection-btn'); // 이름 변경
+        const saveImageBtn = document.getElementById('save-image-btn'); 
         const logList = document.getElementById('log-list');
         const logTitle = document.getElementById('log-title');
-        const logSection = document.getElementById('log-section'); // 이미지 캡처 대상
+        const logSection = document.getElementById('log-section');
 
         let timer;
         let totalTime;
         let timeRemaining;
         let currentActivity = '';
         let startTime = null;
+        let reflectionText = ''; // 성찰 내용을 임시 저장할 변수 추가
         const radius = 45;
         const circumference = 2 * Math.PI * radius;
         
@@ -225,7 +240,6 @@
             if (savedLogs) {
                 try {
                     const logsArray = JSON.parse(savedLogs);
-                    // 최신 기록을 위에 표시하기 위해 reverse() 제거
                     logsArray.forEach(html => {
                         const tempDiv = document.createElement('div');
                         tempDiv.innerHTML = html;
@@ -233,7 +247,7 @@
                             logList.appendChild(tempDiv.firstChild);
                         }
                     });
-                    // 저장된 기록을 역순으로 다시 배치하여 최신 기록이 맨 위로 오도록 함
+                    // 로컬 스토리지에 저장된 순서대로 표시
                     Array.from(logList.children).reverse().forEach(node => logList.prepend(node));
                 } catch (e) {
                     console.error("Error loading logs from localStorage:", e);
@@ -279,7 +293,7 @@
 
         function startTimer() {
             if (activityInput.value.trim() === '') {
-                // ... (알림창 코드 생략)
+                // 경고창 코드는 그대로
                 return;
             }
             currentActivity = activityInput.value;
@@ -296,7 +310,17 @@
                 updateDisplay();
                 if (timeRemaining <= 0) {
                     clearInterval(timer);
-                    // ... (종료 알림창 코드 생략)
+                    // 타이머 종료 시 알림과 성찰 영역 표시
+                    const message = '시간이 종료되었습니다!';
+                    const customAlert = document.createElement('div');
+                    customAlert.className = 'fixed inset-0 flex items-center justify-center bg-gray-900 bg-opacity-50 z-50';
+                    customAlert.innerHTML = `
+                        <div class="bg-white p-6 rounded-xl shadow-lg flex flex-col items-center">
+                            <p class="text-lg font-bold mb-4">${message}</p>
+                            <button class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg" onclick="this.parentNode.parentNode.remove()">확인</button>
+                        </div>
+                    `;
+                    document.body.appendChild(customAlert);
                     reflectionArea.classList.remove('hidden');
                 }
             }, 1000);
@@ -311,11 +335,14 @@
             setTimer(minutesInput.value);
             reflectionArea.classList.add('hidden');
             activityInput.value = '';
+            reflectionInput.value = ''; // 성찰 내용도 리셋
         }
 
-        function createLogEntry() {
-            const reflection = reflectionInput.value;
+        // 성찰 완료 버튼 클릭 시 호출될 함수 (로그를 최종적으로 목록에 추가)
+        function completeReflection() {
+            reflectionText = reflectionInput.value; // 성찰 내용 저장
             const endTime = new Date();
+
             const logItem = document.createElement('li');
             logItem.className = 'log-list-item';
             logItem.innerHTML = `
@@ -324,71 +351,71 @@
                     <span class="font-semibold">완료시간:</span> ${formatTime(endTime)}
                 </p>
                 <h3 class="font-bold text-gray-900 mb-1">활동내용: ${currentActivity} (${Math.floor(totalTime / 60)}분)</h3>
-                <p class="text-gray-700">성찰내용: ${reflection}</p>
+                <p class="text-gray-700">성찰내용: ${reflectionText}</p>
             `;
             logList.prepend(logItem); // 최신 기록을 맨 위로
 
             saveLogsToLocalStorage(); // Local Storage에 저장
             
             reflectionArea.classList.add('hidden');
-            activityInput.value = '';
-            reflectionInput.value = '';
+            reflectionInput.value = ''; // 성찰 입력창 비우기
+            activityInput.value = ''; // 활동 내용 입력창 비우기
         }
 
         // --- 이미지 저장 기능 (HTML2Canvas 사용) ---
         function captureAndSaveImage() {
-            // 이미지를 캡처할 영역을 지정합니다. (나의 시간 기록 섹션)
+            // 이미지 캡처 전, 로그 섹션의 실제 높이만큼 여백을 임시로 확보
+            const originalScrollY = window.scrollY;
+            window.scrollTo(0, 0); // 스크롤을 맨 위로 이동 (캡처 오류 방지)
+            
             html2canvas(logSection, {
-                scale: 2, // 고해상도 캡처
+                scale: 2,
                 logging: false,
-                useCORS: true 
+                useCORS: true,
+                backgroundColor: '#ffffff'
             }).then(canvas => {
-                // 캡처된 캔버스를 이미지 URL로 변환
+                window.scrollTo(0, originalScrollY); // 스크롤 위치 복구
+                
                 const imageURL = canvas.toDataURL('image/png');
                 
-                // 다운로드 링크를 만듭니다.
                 const a = document.createElement('a');
                 a.href = imageURL;
                 const timestamp = new Date().toISOString().slice(0, 19).replace(/[:T-]/g, '');
                 a.download = `pomodoro_log_${timestamp}.png`;
                 
-                // 클릭 이벤트를 강제로 발생시켜 다운로드를 시작합니다.
                 document.body.appendChild(a);
                 a.click();
                 document.body.removeChild(a);
                 
-                alert('기록이 이미지 파일로 저장되었습니다!');
+                alert('기록 전체가 이미지 파일로 저장되었습니다!');
             }).catch(error => {
+                window.scrollTo(0, originalScrollY); // 오류 발생 시에도 복구
                 console.error('이미지 저장 오류:', error);
-                alert('이미지 저장에 실패했습니다. (콘솔 확인)');
+                alert('이미지 저장에 실패했습니다. 브라우저 콘솔을 확인해주세요.');
             });
         }
         
         // --- 이벤트 리스너 설정 ---
 
-        // 원래 saveLog 대신 createLogEntry 실행
-        saveBtn.addEventListener('click', createLogEntry);
+        startBtn.addEventListener('click', startTimer);
+        stopBtn.addEventListener('click', stopTimer);
+        resetBtn.addEventListener('click', resetTimer);
         
-        // 이미지 저장 버튼 클릭 시 로컬 저장 및 이미지 캡처
-        saveImageBtn.addEventListener('click', () => {
-             createLogEntry(); // 로그를 리스트에 추가하고 로컬에 저장
-             captureAndSaveImage(); // 기록 섹션을 이미지로 캡처하여 저장
-        });
+        // 성찰 완료 버튼에 로그 추가 기능 연결
+        completeReflectionBtn.addEventListener('click', completeReflection); 
 
-        // (나머지 이벤트 리스너는 그대로 유지)
+        // 이미지 저장 버튼에 이미지 캡처 기능 연결
+        saveImageBtn.addEventListener('click', captureAndSaveImage); 
+
         minutesInput.addEventListener('change', (e) => {
             const newMinutes = parseInt(e.target.value);
             if (!isNaN(newMinutes) && newMinutes > 0 && newMinutes <= 60) {
                 setTimer(newMinutes);
             } else {
-                //... (알림창 코드 생략)
+                // 경고창 코드는 그대로
                 minutesInput.value = Math.floor(totalTime / 60);
             }
         });
-
-        startBtn.addEventListener('click', startTimer);
-        stopBtn.addEventListener('click', stopTimer);
-        resetBtn.addEventListener('click', resetTimer);
 
         // 초기 실행
         setTimer(minutesInput.value);
