@@ -232,7 +232,7 @@
         const logList = document.getElementById('log-list');
         const logTitle = document.getElementById('log-title');
         const logSection = document.getElementById('log-section');
-        const editMessage = document.getElementById('edit-message'); // 새로 추가된 메시지 영역
+        const editMessage = document.getElementById('edit-message');
 
         let timer;
         let totalTime;
@@ -281,7 +281,7 @@
         function appendLogToDisplay(logData) {
             const logItem = document.createElement('li');
             logItem.className = 'log-list-item';
-            logItem.dataset.logId = logData.id; // 수정 기능을 위해 ID를 HTML 요소에 저장
+            logItem.dataset.logId = logData.id;
             logItem.innerHTML = `
                 <p class="text-sm text-gray-500 mb-1">
                     <span class="font-semibold">시작시간:</span> ${logData.formattedStartTime} | 
@@ -346,8 +346,9 @@
             currentActivity = activityInput.value;
             startTime = new Date();
             
-            // 기존 상태 초기화 및 메시지 숨기기
+            // ⭐핵심 수정: 타이머 시작 시 성찰 입력란 내용 초기화 및 UI 정리
             resetEditContext(); 
+            reflectionInput.value = ''; // 성찰 입력란 비우기
             
             clearInterval(timer);
             if (timeRemaining <= 0) {
@@ -387,7 +388,6 @@
             setTimer(minutesInput.value);
             resetEditContext();
             activityInput.value = '';
-            reflectionInput.value = '';
         }
 
         // 수정 모드 종료 및 UI 초기화
@@ -396,7 +396,10 @@
             pendingLogData = null;
             logIdToEdit = null;
             completeReflectionBtn.textContent = '성찰 완료';
+            
+            // 메시지 숨기기
             editMessage.classList.add('hidden');
+            editMessage.innerHTML = ''; 
             
             // 모든 항목의 'editing' 클래스 제거
             logList.querySelectorAll('.log-list-item').forEach(item => {
@@ -414,7 +417,7 @@
 
         // 기록 수정 버튼 처리 함수 (Alert 제거 및 UI 전환)
         function handleEditLog(e) {
-            // 현재 수정 작업 취소 및 UI 초기화
+            // 현재 진행 중이던 수정/작업 모드 초기화
             resetEditContext();
             
             const logId = parseInt(e.target.dataset.logId);
@@ -440,6 +443,10 @@
                     <span class="text-blue-600">"${logToEdit.activity}"</span> 기록을 수정 중입니다.
                 `;
                 editMessage.classList.remove('hidden');
+
+                // 사용자가 성찰 입력 영역을 바로 보도록 스크롤
+                reflectionInput.scrollIntoView({ behavior: 'smooth' });
+                reflectionInput.focus();
             }
         }
 
@@ -479,8 +486,6 @@
                 saveUserLogs(pendingLogData);
                 loadUserLogs(currentUserId);
                 
-                // 3. 정리
-                activityInput.value = '';
             } else {
                 alert('저장하거나 수정할 활동 기록을 찾을 수 없습니다. 타이머를 먼저 시작해주세요.');
                 return; 
@@ -488,7 +493,7 @@
             
             // 공통 정리 작업
             resetEditContext();
-            activityInput.value = ''; // 활동 입력란 비우기
+            activityInput.value = '';
         }
         
         // --- 이미지 저장 기능 (HTML2Canvas 사용) ---
