@@ -1,7 +1,217 @@
-<script>
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pomodoro Timer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap');
+        
+        /* 기본 레이아웃 및 반응형 설정 */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 1rem;
+            box-sizing: border-box;
+        }
+        .main-container {
+            display: flex;
+            flex-direction: column; 
+            gap: 1.5rem;
+            width: 100%;
+            max-width: 1200px;
+        }
+        .timer-section, .log-section {
+            width: 100%;
+            background-color: #ffffff;
+            border-radius: 1.5rem;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            padding: 1.5rem;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+        .log-section {
+            overflow-y: auto;
+            text-align: left;
+        }
+        
+        /* PC (min-width: 768px) 반응형 스타일 */
+        @media (min-width: 768px) {
+            body {
+                align-items: flex-start;
+                padding: 2rem;
+            }
+            .main-container {
+                flex-direction: row;
+                gap: 2rem;
+            }
+            .timer-section {
+                width: 50%;
+                padding: 2rem;
+            }
+            .log-section {
+                width: 50%;
+                padding: 2rem;
+                max-height: calc(100vh - 4rem);
+            }
+        }
+        
+        /* 타이머 및 입력 요소 스타일 */
+        .timer-display {
+            position: relative;
+            width: 250px;
+            height: 250px;
+            margin-bottom: 1.5rem;
+        }
+        .timer-display .circle-bg {
+            fill: none;
+            stroke: #e2e8f0;
+            stroke-width: 10px;
+        }
+        .timer-display .circle-progress {
+            fill: none;
+            stroke: #ef4444;
+            stroke-width: 10px;
+            stroke-linecap: round;
+            transform: rotate(-90deg);
+            transform-origin: 50% 50%;
+            transition: stroke-dashoffset 0.5s linear;
+        }
+        .timer-time-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 3rem;
+            font-weight: bold;
+            color: #1f2937;
+        }
+        .timer-input-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+        .timer-input {
+            width: 100px;
+            text-align: center;
+            font-size: 1.5rem;
+            padding: 0.5rem;
+            border: 2px solid #d1d5db;
+            border-radius: 0.75rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .timer-input:focus {
+            border-color: #ef4444;
+        }
+        .reflection-input {
+            width: 100%;
+            height: 100px;
+            padding: 0.75rem;
+            border: 2px solid #d1d5db;
+            border-radius: 0.75rem;
+            resize: none;
+            outline: none;
+            margin-top: 1rem;
+            transition: border-color 0.2s;
+        }
+        .reflection-input:focus {
+            border-color: #ef4444;
+        }
+        .log-list-item {
+            background-color: #f9fafb;
+            padding: 1rem;
+            border-radius: 0.75rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+        }
+        #save-image-btn {
+             background-color: #3b82f6;
+        }
+        #save-image-btn:hover {
+             background-color: #2563eb;
+        }
+        /* 입력 필드 중앙 정렬 보조 */
+        .timer-input-group.w-full.max-w-xs.mx-auto label {
+            align-self: flex-start;
+        }
+    </style>
+</head>
+<body>
+    <div class="main-container">
+        <div class="timer-section">
+            <h1 class="text-3xl font-bold text-gray-900 mb-4">포모도로 타이머</h1>
+
+            <div class="timer-display">
+                <svg class="w-full h-full" viewBox="0 0 100 100">
+                    <circle class="circle-bg" cx="50" cy="50" r="45"></circle>
+                    <circle class="circle-progress" cx="50" cy="50" r="45" id="circle-progress"></circle>
+                </svg>
+                <div id="timer-time" class="timer-time-text">25:00</div>
+            </div>
+
+            <div class="flex flex-col items-center w-full">
+                <div class="timer-input-group w-full max-w-xs mx-auto">
+                    <label for="user-id" class="text-gray-600 mb-2">사용자 이름 (필수):</label>
+                    <input type="text" id="user-id" placeholder="나만의 닉네임" class="w-full p-2 border-2 border-gray-300 rounded-lg focus:border-red-500 text-left" required>
+                </div>
+                <div class="timer-input-group w-full max-w-xs mx-auto"> 
+                    <label for="activity" class="text-gray-600 mb-2">활동 내용:</label>
+                    <input type="text" id="activity" placeholder="예) 문서 작업" class="w-full p-2 border-2 border-gray-300 rounded-lg focus:border-red-500 text-left">
+                </div>
+                
+                <div class="flex space-x-4 mt-4 w-full justify-center">
+                    <button id="start-btn" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-6 rounded-xl transition duration-300 transform hover:scale-105 shadow-md">
+                        시작
+                    </button>
+                    <button id="stop-btn" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-6 rounded-xl transition duration-300 transform hover:scale-105 shadow-md">
+                        중지
+                    </button>
+                    <button id="reset-btn" class="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-6 rounded-xl transition duration-300 transform hover:scale-105 shadow-md">
+                        재설정
+                    </button>
+                </div>
+                <div class="timer-input-group mt-4">
+                    <label for="minutes" class="text-gray-600 mb-2">원하는 시간 설정 (분):</label>
+                    <input type="number" id="minutes" value="25" min="1" max="60" class="timer-input">
+                </div>
+            </div>
+            
+            <div id="reflection-area" class="w-full hidden">
+                <label for="reflection" class="text-gray-600 mt-4 mb-2">활동 성찰:</label>
+                <textarea id="reflection" class="reflection-input" placeholder="이 세션 동안 어떤 점을 잘했고, 아쉬운 점은 무엇인가요?"></textarea>
+                
+                <button id="complete-reflection-btn" class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-6 rounded-xl transition duration-300 transform hover:scale-105 shadow-md mt-4">
+                    성찰 완료
+                </button>
+            </div>
+        </div>
+        
+        <div class="log-section" id="log-section">
+            <h2 id="log-title" class="text-2xl font-bold text-gray-800 mb-4">나의 시간 기록</h2>
+            <ul id="log-list">
+                </ul>
+            
+            <button id="save-image-btn" class="w-full text-white font-bold py-2 px-6 rounded-xl transition duration-300 transform hover:scale-105 shadow-md mt-4">
+                기록 전체 이미지로 저장
+            </button>
+        </div>
+    </div>
+
+    <script>
         const minutesInput = document.getElementById('minutes');
         const activityInput = document.getElementById('activity');
-        const userIdInput = document.getElementById('user-id'); // 새로 추가된 ID 입력 필드
+        const userIdInput = document.getElementById('user-id'); // ID 입력 필드
         const timerTime = document.getElementById('timer-time');
         const startBtn = document.getElementById('start-btn');
         const stopBtn = document.getElementById('stop-btn');
@@ -20,7 +230,7 @@
         let timeRemaining;
         let currentActivity = '';
         let startTime = null;
-        let currentUserId = ''; // 현재 사용자 ID 저장
+        let currentUserId = ''; 
         const radius = 45;
         const circumference = 2 * Math.PI * radius;
         
@@ -29,8 +239,12 @@
         // 모든 사용자의 로그를 하나의 키에 JSON 문자열로 저장
         function getAllLogs() {
             try {
-                return JSON.parse(localStorage.getItem('allPomodoroLogs') || '[]');
+                // 저장된 HTML 문자열을 가져옴
+                const rawLogs = localStorage.getItem('allPomodoroLogs');
+                // JSON.parse를 안전하게 실행
+                return rawLogs ? JSON.parse(rawLogs) : [];
             } catch (e) {
+                console.error("Error reading logs from localStorage:", e);
                 return [];
             }
         }
@@ -41,9 +255,11 @@
             const existingLogIndex = allLogs.findIndex(log => log.id === newLog.id);
             
             if (existingLogIndex > -1) {
-                allLogs[existingLogIndex] = newLog; // 기존 로그 업데이트 (성찰 추가 시)
+                // 기존 로그를 업데이트합니다.
+                allLogs[existingLogIndex] = newLog;
             } else {
-                allLogs.push(newLog); // 새 로그 추가
+                // 새 로그를 추가합니다.
+                allLogs.push(newLog);
             }
             
             localStorage.setItem('allPomodoroLogs', JSON.stringify(allLogs));
@@ -64,7 +280,7 @@
             });
         }
         
-        // HTML 리스트에 로그 항목 추가
+        // HTML 리스트에 로그 항목 추가 (객체 데이터를 HTML로 변환하여 표시)
         function appendLogToDisplay(logData) {
             const logItem = document.createElement('li');
             logItem.className = 'log-list-item';
@@ -76,7 +292,6 @@
                 <h3 class="font-bold text-gray-900 mb-1">활동내용: ${logData.activity} (${logData.durationMinutes}분)</h3>
                 <p class="text-gray-700">성찰내용: ${logData.reflection || '성찰 내용 없음'}</p>
             `;
-            logList.appendChild(logItem); // append 대신 prepend 사용 시 prepend(logItem)
             logList.prepend(logItem); // 최신 기록을 맨 위로
         }
 
@@ -131,7 +346,6 @@
             currentActivity = activityInput.value;
             startTime = new Date();
             
-            // 기존 성찰 영역 숨김 및 초기화
             reflectionInput.value = '';
             reflectionArea.classList.add('hidden');
             
@@ -140,18 +354,24 @@
                 setTimer(minutesInput.value);
             }
             
-            // 타이머 시작
             timer = setInterval(() => {
                 timeRemaining--;
                 updateDisplay();
                 if (timeRemaining <= 0) {
                     clearInterval(timer);
                     
-                    // 타이머 종료 시, 성찰 입력 전에 임시 로그 항목을 저장하고 표시
-                    createTemporaryLog();
+                    createTemporaryLog(); // 성찰 전 임시 로그 저장
                     
-                    // 종료 알림
-                    alert('시간이 종료되었습니다! 활동 성찰을 기록해주세요.');
+                    const message = '시간이 종료되었습니다! 활동 성찰을 기록해주세요.';
+                    const customAlert = document.createElement('div');
+                    customAlert.className = 'fixed inset-0 flex items-center justify-center bg-gray-900 bg-opacity-50 z-50';
+                    customAlert.innerHTML = `
+                        <div class="bg-white p-6 rounded-xl shadow-lg flex flex-col items-center">
+                            <p class="text-lg font-bold mb-4">${message}</p>
+                            <button class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg" onclick="this.parentNode.parentNode.remove()">확인</button>
+                        </div>
+                    `;
+                    document.body.appendChild(customAlert);
                     reflectionArea.classList.remove('hidden');
                 }
             }, 1000);
@@ -174,7 +394,7 @@
             const endTime = new Date();
             
             const logData = {
-                id: Date.now(), // 고유 ID로 사용
+                id: Date.now(),
                 userId: currentUserId,
                 activity: currentActivity,
                 durationMinutes: Math.floor(totalTime / 60),
@@ -184,28 +404,36 @@
                 reflection: '' // 성찰은 나중에 추가
             };
             
-            saveUserLogs(logData);
+            saveUserLogs(logData); // Local Storage에 저장
             loadUserLogs(currentUserId); // 목록 새로고침하여 임시 로그 표시
         }
 
 
         // 성찰 완료 버튼 클릭 시 호출될 함수 (기존 로그를 업데이트)
         function completeReflection() {
-            const reflectionText = reflectionInput.value;
+            const reflectionText = reflectionInput.value.trim();
             
-            // 가장 최근에 저장된 (성찰이 없는) 로그를 찾습니다.
+            // 모든 로그를 가져와 현재 사용자의 로그만 필터링
             const allLogs = getAllLogs();
             const userLogs = allLogs.filter(log => log.userId === currentUserId && log.reflection === '');
             
             if (userLogs.length > 0) {
-                // 가장 최근에 저장된 (성찰이 없는) 로그를 업데이트합니다.
+                // 가장 최근에 저장된 (성찰이 없는) 로그의 ID를 찾습니다.
+                // 배열의 마지막 요소가 가장 최근에 추가된 로그이므로 그것을 업데이트합니다.
                 const logToUpdate = userLogs[userLogs.length - 1];
-                logToUpdate.reflection = reflectionText;
                 
-                saveUserLogs(logToUpdate);
-                loadUserLogs(currentUserId); // 업데이트된 내용으로 목록 새로고침
+                // 전체 로그 배열에서 해당 ID의 로그를 찾아서 업데이트
+                const indexToUpdate = allLogs.findIndex(log => log.id === logToUpdate.id);
+                
+                if (indexToUpdate > -1) {
+                    allLogs[indexToUpdate].reflection = reflectionText;
+                    localStorage.setItem('allPomodoroLogs', JSON.stringify(allLogs));
+                    loadUserLogs(currentUserId); // 업데이트된 내용으로 목록 새로고침
+                } else {
+                     alert('업데이트할 로그를 찾을 수 없습니다.');
+                }
             } else {
-                 alert('업데이트할 최근 활동 기록을 찾을 수 없습니다.');
+                 alert('업데이트할 활동 기록을 찾을 수 없습니다. 타이머가 끝난 후 성찰을 입력해주세요.');
             }
 
             reflectionArea.classList.add('hidden');
@@ -214,7 +442,6 @@
         
         // --- 이미지 저장 기능 (HTML2Canvas 사용) ---
         function captureAndSaveImage() {
-            // ... (이미지 저장 로직은 이전과 동일)
             const originalScrollY = window.scrollY;
             window.scrollTo(0, 0); 
             
@@ -246,20 +473,17 @@
         }
         
         // --- 이벤트 리스너 설정 ---
-        
+
         // 사용자 ID가 변경될 때마다 로그 목록 새로고침
         userIdInput.addEventListener('change', (e) => {
              loadUserLogs(e.target.value.trim());
         });
-
+        
         startBtn.addEventListener('click', startTimer);
         stopBtn.addEventListener('click', stopTimer);
         resetBtn.addEventListener('click', resetTimer);
         
-        // 성찰 완료 버튼에 로그 업데이트 기능 연결
         completeReflectionBtn.addEventListener('click', completeReflection); 
-
-        // 이미지 저장 버튼에 이미지 캡처 기능 연결
         saveImageBtn.addEventListener('click', captureAndSaveImage); 
 
         minutesInput.addEventListener('change', (e) => {
@@ -267,7 +491,16 @@
             if (!isNaN(newMinutes) && newMinutes > 0 && newMinutes <= 60) {
                 setTimer(newMinutes);
             } else {
-                alert("1분에서 60분 사이의 유효한 값을 입력해주세요.");
+                const message = "1분에서 60분 사이의 유효한 값을 입력해주세요.";
+                const customAlert = document.createElement('div');
+                customAlert.className = 'fixed inset-0 flex items-center justify-center bg-gray-900 bg-opacity-50 z-50';
+                customAlert.innerHTML = `
+                    <div class="bg-white p-6 rounded-xl shadow-lg flex flex-col items-center">
+                        <p class="text-lg font-bold mb-4">${message}</p>
+                        <button class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg" onclick="this.parentNode.parentNode.remove()">확인</button>
+                    </div>
+                `;
+                document.body.appendChild(customAlert);
                 minutesInput.value = Math.floor(totalTime / 60);
             }
         });
@@ -275,6 +508,18 @@
         // 초기 실행
         setTimer(minutesInput.value);
         setLogTitle();
-        // 초기 로드 시에는 ID 입력창에 값이 없으므로 로드하지 않음.
-        // 사용자가 ID를 입력하면 'change' 이벤트로 로드됩니다.
+        // 페이지 로드 시 localStorage에 마지막으로 사용한 ID를 저장하고 불러오면 더 편리합니다.
+        const lastUserId = localStorage.getItem('lastUserId');
+        if (lastUserId) {
+            userIdInput.value = lastUserId;
+            loadUserLogs(lastUserId);
+        }
+        
+        // 사용자가 ID를 입력할 때마다 로컬 스토리지에 저장
+        userIdInput.addEventListener('input', () => {
+            localStorage.setItem('lastUserId', userIdInput.value.trim());
+            loadUserLogs(userIdInput.value.trim());
+        });
     </script>
+</body>
+</html>
