@@ -211,7 +211,7 @@
     <script>
         const minutesInput = document.getElementById('minutes');
         const activityInput = document.getElementById('activity');
-        const userIdInput = document.getElementById('user-id'); // ID 입력 필드
+        const userIdInput = document.getElementById('user-id');
         const timerTime = document.getElementById('timer-time');
         const startBtn = document.getElementById('start-btn');
         const stopBtn = document.getElementById('stop-btn');
@@ -231,17 +231,16 @@
         let currentActivity = '';
         let startTime = null;
         let currentUserId = ''; 
+        let pendingLogData = null; // 새로운 로그 생성을 위한 임시 데이터 저장
+        let logIdToEdit = null;     // 수정 중인 로그 ID 저장
         const radius = 45;
         const circumference = 2 * Math.PI * radius;
         
         // --- 데이터 관리 함수 (Local Storage) ---
 
-        // 모든 사용자의 로그를 하나의 키에 JSON 문자열로 저장
         function getAllLogs() {
             try {
-                // 저장된 HTML 문자열을 가져옴
                 const rawLogs = localStorage.getItem('allPomodoroLogs');
-                // JSON.parse를 안전하게 실행
                 return rawLogs ? JSON.parse(rawLogs) : [];
             } catch (e) {
                 console.error("Error reading logs from localStorage:", e);
@@ -249,38 +248,29 @@
             }
         }
         
-        // 현재 사용자의 로그만 저장/업데이트
         function saveUserLogs(newLog) {
             const allLogs = getAllLogs();
-            const existingLogIndex = allLogs.findIndex(log => log.id === newLog.id);
-            
-            if (existingLogIndex > -1) {
-                // 기존 로그를 업데이트합니다.
-                allLogs[existingLogIndex] = newLog;
-            } else {
-                // 새 로그를 추가합니다.
-                allLogs.push(newLog);
-            }
-            
+            // 새 로그를 추가
+            allLogs.push(newLog);
             localStorage.setItem('allPomodoroLogs', JSON.stringify(allLogs));
         }
 
-        // 현재 사용자의 로그만 필터링하여 불러오기
         function loadUserLogs(userId) {
-            logList.innerHTML = ''; // 기존 목록 초기화
+            logList.innerHTML = '';
             if (!userId) return;
 
             const allLogs = getAllLogs();
             
             const userLogs = allLogs.filter(log => log.userId === userId)
-                                    .sort((a, b) => b.timestamp - a.timestamp); // 최신 순 정렬
+                                    .sort((a, b) => b.timestamp - a.timestamp);
 
             userLogs.forEach(logData => {
                 appendLogToDisplay(logData);
             });
+            // 로그 로드 후 수정 버튼 이벤트 리스너 설정
+            setupEditLogListeners();
         }
         
-        // HTML 리스트에 로그 항목 추가 (객체 데이터를 HTML로 변환하여 표시)
         function appendLogToDisplay(logData) {
             const logItem = document.createElement('li');
             logItem.className = 'log-list-item';
@@ -290,11 +280,13 @@
                     <span class="font-semibold">완료시간:</span> ${logData.formattedEndTime}
                 </p>
                 <h3 class="font-bold text-gray-900 mb-1">활동내용: ${logData.activity} (${logData.durationMinutes}분)</h3>
-                <p class="text-gray-700">성찰내용: ${logData.reflection || '성찰 내용 없음'}</p>
+                <p class="text-gray-700">성찰내용: ${logData.reflection.replace(/\n/g, '<br>') || '성찰 내용 없음'}</p>
+                <button data-log-id="${logData.id}" class="edit-log-btn bg-yellow-500 hover:bg-yellow-600 text-white text-xs py-1 px-3 rounded-lg mt-2">
+                    기록 수정
+                </button>
             `;
-            logList.prepend(logItem); // 최신 기록을 맨 위로
+            logList.prepend(logItem);
         }
-
 
         // --- 핵심 타이머 및 UI 함수 ---
 
@@ -346,8 +338,12 @@
             currentActivity = activityInput.value;
             startTime = new Date();
             
+            // 기존 상태 초기화
             reflectionInput.value = '';
             reflectionArea.classList.add('hidden');
+            completeReflectionBtn.textContent = '성찰 완료';
+            pendingLogData = null; 
+            logIdToEdit = null;
             
             clearInterval(timer);
             if (timeRemaining <= 0) {
@@ -360,18 +356,19 @@
                 if (timeRemaining <= 0) {
                     clearInterval(timer);
                     
-                    createTemporaryLog(); // 성찰 전 임시 로그 저장
+                    // 타이머 종료 시: 성찰 완료 버튼이 눌릴 때까지 기록하지 않고 임시 데이터만 저장
+                    pendingLogData = {
+                        id: Date.now(),
+                        userId: currentUserId,
+                        activity: currentActivity,
+                        durationMinutes: Math.floor(totalTime / 60),
+                        timestamp: new Date().getTime(),
+                        formattedStartTime: formatTime(startTime),
+                        formattedEndTime: formatTime(new Date()),
+                        reflection: ''
+                    };
                     
-                    const message = '시간이 종료되었습니다! 활동 성찰을 기록해주세요.';
-                    const customAlert = document.createElement('div');
-                    customAlert.className = 'fixed inset-0 flex items-center justify-center bg-gray-900 bg-opacity-50 z-50';
-                    customAlert.innerHTML = `
-                        <div class="bg-white p-6 rounded-xl shadow-lg flex flex-col items-center">
-                            <p class="text-lg font-bold mb-4">${message}</p>
-                            <button class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg" onclick="this.parentNode.parentNode.remove()">확인</button>
-                        </div>
-                    `;
-                    document.body.appendChild(customAlert);
+                    alert('시간이 종료되었습니다! 활동 성찰을 기록하고 [성찰 완료] 버튼을 눌러주세요.');
                     reflectionArea.classList.remove('hidden');
                 }
             }, 1000);
@@ -387,57 +384,83 @@
             reflectionArea.classList.add('hidden');
             activityInput.value = '';
             reflectionInput.value = '';
+            completeReflectionBtn.textContent = '성찰 완료';
+            pendingLogData = null;
+            logIdToEdit = null;
         }
-        
-        // 타이머 종료 시, 성찰 내용 없이 먼저 로그를 저장하고 표시
-        function createTemporaryLog() {
-            const endTime = new Date();
+
+        function setupEditLogListeners() {
+            logList.querySelectorAll('.edit-log-btn').forEach(button => {
+                button.removeEventListener('click', handleEditLog); // 중복 방지
+                button.addEventListener('click', handleEditLog);
+            });
+        }
+
+        function handleEditLog(e) {
+            const logId = parseInt(e.target.dataset.logId);
+            const allLogs = getAllLogs();
+            const logToEdit = allLogs.find(log => log.id === logId);
             
-            const logData = {
-                id: Date.now(),
-                userId: currentUserId,
-                activity: currentActivity,
-                durationMinutes: Math.floor(totalTime / 60),
-                timestamp: endTime.getTime(),
-                formattedStartTime: formatTime(startTime),
-                formattedEndTime: formatTime(endTime),
-                reflection: '' // 성찰은 나중에 추가
-            };
-            
-            saveUserLogs(logData); // Local Storage에 저장
-            loadUserLogs(currentUserId); // 목록 새로고침하여 임시 로그 표시
+            if (logToEdit) {
+                // 수정 모드 설정
+                logIdToEdit = logId;
+                pendingLogData = null; // 새 로그 생성 모드 해제
+                
+                // 입력 필드 채우기
+                reflectionArea.classList.remove('hidden');
+                reflectionInput.value = logToEdit.reflection || '';
+                activityInput.value = logToEdit.activity; 
+                
+                // 버튼 텍스트 변경
+                completeReflectionBtn.textContent = '기록 완료/수정'; 
+                
+                alert(`"${logToEdit.activity}" 기록을 수정합니다. 성찰 및 활동 내용을 수정하고 [기록 완료/수정] 버튼을 눌러주세요.`);
+            }
         }
 
 
-        // 성찰 완료 버튼 클릭 시 호출될 함수 (기존 로그를 업데이트)
+        // 성찰 완료/수정 버튼 클릭 시 호출될 함수 (신규 생성 또는 기존 수정)
         function completeReflection() {
             const reflectionText = reflectionInput.value.trim();
-            
-            // 모든 로그를 가져와 현재 사용자의 로그만 필터링
-            const allLogs = getAllLogs();
-            const userLogs = allLogs.filter(log => log.userId === currentUserId && log.reflection === '');
-            
-            if (userLogs.length > 0) {
-                // 가장 최근에 저장된 (성찰이 없는) 로그의 ID를 찾습니다.
-                // 배열의 마지막 요소가 가장 최근에 추가된 로그이므로 그것을 업데이트합니다.
-                const logToUpdate = userLogs[userLogs.length - 1];
-                
-                // 전체 로그 배열에서 해당 ID의 로그를 찾아서 업데이트
-                const indexToUpdate = allLogs.findIndex(log => log.id === logToUpdate.id);
+            const currentActivityValue = activityInput.value.trim();
+
+            if (logIdToEdit) {
+                // --- 기존 로그 수정 모드 ---
+                const allLogs = getAllLogs();
+                const indexToUpdate = allLogs.findIndex(log => log.id === logIdToEdit);
                 
                 if (indexToUpdate > -1) {
                     allLogs[indexToUpdate].reflection = reflectionText;
+                    allLogs[indexToUpdate].activity = currentActivityValue; // 활동명도 수정 가능
                     localStorage.setItem('allPomodoroLogs', JSON.stringify(allLogs));
-                    loadUserLogs(currentUserId); // 업데이트된 내용으로 목록 새로고침
+                    loadUserLogs(currentUserId);
                 } else {
-                     alert('업데이트할 로그를 찾을 수 없습니다.');
+                     alert('수정할 로그를 찾을 수 없습니다.');
                 }
+            
+            } else if (pendingLogData) {
+                // --- 신규 로그 생성 모드 ---
+                
+                // 1. 임시 데이터에 성찰 내용을 추가하여 최종 로그 생성
+                pendingLogData.reflection = reflectionText;
+                
+                // 2. 저장하고 표시
+                saveUserLogs(pendingLogData);
+                loadUserLogs(currentUserId);
+                
+                // 3. 정리
+                activityInput.value = ''; // 활동 내용 입력창 비우기
             } else {
-                 alert('업데이트할 활동 기록을 찾을 수 없습니다. 타이머가 끝난 후 성찰을 입력해주세요.');
+                alert('저장하거나 수정할 활동 기록을 찾을 수 없습니다.');
+                return; // 함수 종료
             }
-
+            
+            // 공통 정리 작업
+            pendingLogData = null;
+            logIdToEdit = null;
             reflectionArea.classList.add('hidden');
-            reflectionInput.value = ''; 
+            reflectionInput.value = '';
+            completeReflectionBtn.textContent = '성찰 완료'; // 버튼 텍스트 초기화
         }
         
         // --- 이미지 저장 기능 (HTML2Canvas 사용) ---
@@ -474,9 +497,11 @@
         
         // --- 이벤트 리스너 설정 ---
 
-        // 사용자 ID가 변경될 때마다 로그 목록 새로고침
-        userIdInput.addEventListener('change', (e) => {
-             loadUserLogs(e.target.value.trim());
+        // 사용자 ID 입력 시 로그 로드 및 저장
+        userIdInput.addEventListener('input', () => {
+            currentUserId = userIdInput.value.trim();
+            localStorage.setItem('lastUserId', currentUserId);
+            loadUserLogs(currentUserId);
         });
         
         startBtn.addEventListener('click', startTimer);
@@ -491,35 +516,20 @@
             if (!isNaN(newMinutes) && newMinutes > 0 && newMinutes <= 60) {
                 setTimer(newMinutes);
             } else {
-                const message = "1분에서 60분 사이의 유효한 값을 입력해주세요.";
-                const customAlert = document.createElement('div');
-                customAlert.className = 'fixed inset-0 flex items-center justify-center bg-gray-900 bg-opacity-50 z-50';
-                customAlert.innerHTML = `
-                    <div class="bg-white p-6 rounded-xl shadow-lg flex flex-col items-center">
-                        <p class="text-lg font-bold mb-4">${message}</p>
-                        <button class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg" onclick="this.parentNode.parentNode.remove()">확인</button>
-                    </div>
-                `;
-                document.body.appendChild(customAlert);
+                alert("1분에서 60분 사이의 유효한 값을 입력해주세요.");
                 minutesInput.value = Math.floor(totalTime / 60);
             }
         });
 
-        // 초기 실행
+        // 초기 실행: 마지막 사용자 ID로 자동 로드
         setTimer(minutesInput.value);
         setLogTitle();
-        // 페이지 로드 시 localStorage에 마지막으로 사용한 ID를 저장하고 불러오면 더 편리합니다.
         const lastUserId = localStorage.getItem('lastUserId');
         if (lastUserId) {
             userIdInput.value = lastUserId;
+            currentUserId = lastUserId;
             loadUserLogs(lastUserId);
         }
-        
-        // 사용자가 ID를 입력할 때마다 로컬 스토리지에 저장
-        userIdInput.addEventListener('input', () => {
-            localStorage.setItem('lastUserId', userIdInput.value.trim());
-            loadUserLogs(userIdInput.value.trim());
-        });
     </script>
 </body>
 </html>
