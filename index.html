@@ -134,6 +134,11 @@
             border-radius: 0.75rem;
             margin-bottom: 1rem;
             box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+            border: 2px solid transparent; /* 기본 테두리 */
+        }
+        .log-list-item.editing {
+            border: 2px solid #3b82f6; /* 수정 중인 항목 파란색 테두리 */
+            background-color: #eff6ff; /* 배경색 변경 */
         }
         #save-image-btn {
              background-color: #3b82f6;
@@ -169,6 +174,9 @@
                     <label for="activity" class="text-gray-600 mb-2">활동 내용:</label>
                     <input type="text" id="activity" placeholder="예) 문서 작업" class="w-full p-2 border-2 border-gray-300 rounded-lg focus:border-red-500 text-left">
                 </div>
+
+                <p id="edit-message" class="text-sm text-red-500 font-semibold h-5 mb-2 hidden">
+                    </p>
                 
                 <div class="flex space-x-4 mt-4 w-full justify-center">
                     <button id="start-btn" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-6 rounded-xl transition duration-300 transform hover:scale-105 shadow-md">
@@ -224,6 +232,7 @@
         const logList = document.getElementById('log-list');
         const logTitle = document.getElementById('log-title');
         const logSection = document.getElementById('log-section');
+        const editMessage = document.getElementById('edit-message'); // 새로 추가된 메시지 영역
 
         let timer;
         let totalTime;
@@ -231,8 +240,8 @@
         let currentActivity = '';
         let startTime = null;
         let currentUserId = ''; 
-        let pendingLogData = null; // 새로운 로그 생성을 위한 임시 데이터 저장
-        let logIdToEdit = null;     // 수정 중인 로그 ID 저장
+        let pendingLogData = null; 
+        let logIdToEdit = null;     
         const radius = 45;
         const circumference = 2 * Math.PI * radius;
         
@@ -250,7 +259,6 @@
         
         function saveUserLogs(newLog) {
             const allLogs = getAllLogs();
-            // 새 로그를 추가
             allLogs.push(newLog);
             localStorage.setItem('allPomodoroLogs', JSON.stringify(allLogs));
         }
@@ -267,13 +275,13 @@
             userLogs.forEach(logData => {
                 appendLogToDisplay(logData);
             });
-            // 로그 로드 후 수정 버튼 이벤트 리스너 설정
             setupEditLogListeners();
         }
         
         function appendLogToDisplay(logData) {
             const logItem = document.createElement('li');
             logItem.className = 'log-list-item';
+            logItem.dataset.logId = logData.id; // 수정 기능을 위해 ID를 HTML 요소에 저장
             logItem.innerHTML = `
                 <p class="text-sm text-gray-500 mb-1">
                     <span class="font-semibold">시작시간:</span> ${logData.formattedStartTime} | 
@@ -338,12 +346,8 @@
             currentActivity = activityInput.value;
             startTime = new Date();
             
-            // 기존 상태 초기화
-            reflectionInput.value = '';
-            reflectionArea.classList.add('hidden');
-            completeReflectionBtn.textContent = '성찰 완료';
-            pendingLogData = null; 
-            logIdToEdit = null;
+            // 기존 상태 초기화 및 메시지 숨기기
+            resetEditContext(); 
             
             clearInterval(timer);
             if (timeRemaining <= 0) {
@@ -356,7 +360,7 @@
                 if (timeRemaining <= 0) {
                     clearInterval(timer);
                     
-                    // 타이머 종료 시: 성찰 완료 버튼이 눌릴 때까지 기록하지 않고 임시 데이터만 저장
+                    // 타이머 종료 시: 임시 데이터 저장
                     pendingLogData = {
                         id: Date.now(),
                         userId: currentUserId,
@@ -381,40 +385,61 @@
         function resetTimer() {
             stopTimer();
             setTimer(minutesInput.value);
-            reflectionArea.classList.add('hidden');
+            resetEditContext();
             activityInput.value = '';
             reflectionInput.value = '';
-            completeReflectionBtn.textContent = '성찰 완료';
-            pendingLogData = null;
-            logIdToEdit = null;
         }
 
+        // 수정 모드 종료 및 UI 초기화
+        function resetEditContext() {
+            reflectionArea.classList.add('hidden');
+            pendingLogData = null;
+            logIdToEdit = null;
+            completeReflectionBtn.textContent = '성찰 완료';
+            editMessage.classList.add('hidden');
+            
+            // 모든 항목의 'editing' 클래스 제거
+            logList.querySelectorAll('.log-list-item').forEach(item => {
+                item.classList.remove('editing');
+            });
+        }
+
+        // 기록 수정 버튼 클릭 이벤트 리스너 설정
         function setupEditLogListeners() {
             logList.querySelectorAll('.edit-log-btn').forEach(button => {
-                button.removeEventListener('click', handleEditLog); // 중복 방지
+                button.removeEventListener('click', handleEditLog);
                 button.addEventListener('click', handleEditLog);
             });
         }
 
+        // 기록 수정 버튼 처리 함수 (Alert 제거 및 UI 전환)
         function handleEditLog(e) {
+            // 현재 수정 작업 취소 및 UI 초기화
+            resetEditContext();
+            
             const logId = parseInt(e.target.dataset.logId);
             const allLogs = getAllLogs();
             const logToEdit = allLogs.find(log => log.id === logId);
             
             if (logToEdit) {
-                // 수정 모드 설정
+                // 수정 모드 설정 및 ID 저장
                 logIdToEdit = logId;
-                pendingLogData = null; // 새 로그 생성 모드 해제
+                
+                // 오른쪽 항목에 시각적 표시
+                const logItem = e.target.closest('.log-list-item');
+                if (logItem) logItem.classList.add('editing');
                 
                 // 입력 필드 채우기
                 reflectionArea.classList.remove('hidden');
                 reflectionInput.value = logToEdit.reflection || '';
                 activityInput.value = logToEdit.activity; 
                 
-                // 버튼 텍스트 변경
+                // 버튼 텍스트 변경 및 메시지 표시
                 completeReflectionBtn.textContent = '기록 완료/수정'; 
-                
-                alert(`"${logToEdit.activity}" 기록을 수정합니다. 성찰 및 활동 내용을 수정하고 [기록 완료/수정] 버튼을 눌러주세요.`);
+                editMessage.innerHTML = `
+                    <span class="text-blue-600">"${logToEdit.activity}"</span> 기록을 수정 중입니다.
+                `;
+                editMessage.classList.remove('hidden');
             }
         }
 
@@ -424,6 +449,11 @@
             const reflectionText = reflectionInput.value.trim();
             const currentActivityValue = activityInput.value.trim();
 
+            if (!currentActivityValue) {
+                alert('활동 내용은 비워둘 수 없습니다. 다시 입력해주세요.');
+                return;
+            }
+
             if (logIdToEdit) {
                 // --- 기존 로그 수정 모드 ---
                 const allLogs = getAllLogs();
@@ -431,7 +461,7 @@
                 
                 if (indexToUpdate > -1) {
                     allLogs[indexToUpdate].reflection = reflectionText;
-                    allLogs[indexToUpdate].activity = currentActivityValue; // 활동명도 수정 가능
+                    allLogs[indexToUpdate].activity = currentActivityValue; 
                     localStorage.setItem('allPomodoroLogs', JSON.stringify(allLogs));
                     loadUserLogs(currentUserId);
                 } else {
@@ -443,24 +473,22 @@
                 
                 // 1. 임시 데이터에 성찰 내용을 추가하여 최종 로그 생성
                 pendingLogData.reflection = reflectionText;
+                pendingLogData.activity = currentActivityValue; 
                 
                 // 2. 저장하고 표시
                 saveUserLogs(pendingLogData);
                 loadUserLogs(currentUserId);
                 
                 // 3. 정리
-                activityInput.value = ''; // 활동 내용 입력창 비우기
+                activityInput.value = '';
             } else {
-                alert('저장하거나 수정할 활동 기록을 찾을 수 없습니다.');
-                return; // 함수 종료
+                alert('저장하거나 수정할 활동 기록을 찾을 수 없습니다. 타이머를 먼저 시작해주세요.');
+                return; 
             }
             
             // 공통 정리 작업
-            pendingLogData = null;
-            logIdToEdit = null;
-            reflectionArea.classList.add('hidden');
-            reflectionInput.value = '';
-            completeReflectionBtn.textContent = '성찰 완료'; // 버튼 텍스트 초기화
+            resetEditContext();
+            activityInput.value = ''; // 활동 입력란 비우기
         }
         
         // --- 이미지 저장 기능 (HTML2Canvas 사용) ---
@@ -497,7 +525,6 @@
         
         // --- 이벤트 리스너 설정 ---
 
-        // 사용자 ID 입력 시 로그 로드 및 저장
         userIdInput.addEventListener('input', () => {
             currentUserId = userIdInput.value.trim();
             localStorage.setItem('lastUserId', currentUserId);
