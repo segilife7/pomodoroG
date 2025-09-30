@@ -269,7 +269,9 @@
 
             const allLogs = getAllLogs();
             
-            const userLogs = allLogs.filter(log => log.userId === userId)
+            // 오늘 날짜에 해당하는 기록만 필터링합니다. (새로운 로직)
+            const todayDate = getTodayDateString(); 
+            const userLogs = allLogs.filter(log => log.userId === userId && log.dateString === todayDate)
                                     .sort((a, b) => b.timestamp - a.timestamp);
 
             userLogs.forEach(logData => {
@@ -294,6 +296,35 @@
                 </button>
             `;
             logList.prepend(logItem);
+        }
+        
+        // --- 날짜 관리 함수 (추가) ---
+        function getTodayDateString() {
+            const today = new Date();
+            const year = today.getFullYear();
+            const month = String(today.getMonth() + 1).padStart(2, '0');
+            const day = String(today.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+        
+        // --- 이전 날짜 기록 초기화 로직 (핵심 수정) ---
+        function clearPreviousDayLogs() {
+            const todayDate = getTodayDateString();
+            const lastAccessedDate = localStorage.getItem('lastAccessedDate');
+            
+            if (lastAccessedDate && lastAccessedDate !== todayDate) {
+                // 날짜가 바뀌었으면 모든 기록 초기화 (단, 사용자 ID는 보존)
+                const lastUserId = localStorage.getItem('lastUserId');
+                localStorage.clear();
+                if (lastUserId) {
+                    localStorage.setItem('lastUserId', lastUserId);
+                }
+                // 이전 날짜 기록 초기화 알림 (필요 시)
+                // alert("날짜가 바뀌어 이전 기록을 초기화했습니다.");
+            }
+            
+            // 마지막 접속 날짜를 오늘로 업데이트
+            localStorage.setItem('lastAccessedDate', todayDate);
         }
 
         // --- 핵심 타이머 및 UI 함수 ---
@@ -346,9 +377,8 @@
             currentActivity = activityInput.value;
             startTime = new Date();
             
-            // 기존 상태 초기화 및 성찰 입력란 초기화
             resetEditContext(); 
-            reflectionInput.value = ''; // 성찰 입력란 비우기
+            reflectionInput.value = '';
             
             clearInterval(timer);
             if (timeRemaining <= 0) {
@@ -361,7 +391,6 @@
                 if (timeRemaining <= 0) {
                     clearInterval(timer);
                     
-                    // 타이머 종료 시: 임시 데이터 저장
                     pendingLogData = {
                         id: Date.now(),
                         userId: currentUserId,
@@ -370,6 +399,7 @@
                         timestamp: new Date().getTime(),
                         formattedStartTime: formatTime(startTime),
                         formattedEndTime: formatTime(new Date()),
+                        dateString: getTodayDateString(), // 날짜 문자열 저장
                         reflection: ''
                     };
                     
@@ -397,11 +427,9 @@
             logIdToEdit = null;
             completeReflectionBtn.textContent = '성찰 완료';
             
-            // 메시지 숨기기
             editMessage.classList.add('hidden');
             editMessage.innerHTML = ''; 
             
-            // 모든 항목의 'editing' 클래스 제거
             logList.querySelectorAll('.log-list-item').forEach(item => {
                 item.classList.remove('editing');
             });
@@ -417,7 +445,6 @@
 
         // 기록 수정 버튼 처리 함수 (Alert 제거 및 UI 전환)
         function handleEditLog(e) {
-            // 현재 진행 중이던 수정/작업 모드 초기화
             resetEditContext();
             
             const logId = parseInt(e.target.dataset.logId);
@@ -427,16 +454,13 @@
             if (logToEdit) {
                 logIdToEdit = logId;
                 
-                // 오른쪽 항목에 시각적 표시
                 const logItem = e.target.closest('.log-list-item');
                 if (logItem) logItem.classList.add('editing');
                 
-                // 입력 필드 채우기
                 reflectionArea.classList.remove('hidden');
                 reflectionInput.value = logToEdit.reflection || '';
                 activityInput.value = logToEdit.activity; 
                 
-                // 버튼 텍스트 변경 및 메시지 표시
                 completeReflectionBtn.textContent = '기록 완료/수정'; 
                 editMessage.innerHTML = `
                     <span class="text-blue-600">"${logToEdit.activity}"</span> 기록을 수정 중입니다.
@@ -464,7 +488,6 @@
                 const indexToUpdate = allLogs.findIndex(log => log.id === logIdToEdit);
                 
                 if (indexToUpdate > -1) {
-                    // 로그 업데이트
                     allLogs[indexToUpdate].reflection = reflectionText;
                     allLogs[indexToUpdate].activity = currentActivityValue; 
                     localStorage.setItem('allPomodoroLogs', JSON.stringify(allLogs));
@@ -489,7 +512,6 @@
                 return; 
             }
             
-            // 공통 정리 작업
             resetEditContext();
             activityInput.value = '';
         }
@@ -498,21 +520,18 @@
         function captureAndSaveImage() {
             // 캡처 전, 모든 버튼과 스크롤을 임시로 숨기거나 해제합니다.
             
-            // 1. 버튼 숨기기
             logSection.querySelectorAll('.edit-log-btn').forEach(btn => btn.style.display = 'none');
             saveImageBtn.style.display = 'none';
             
-            // 2. 스크롤 내용 포함 (max-height와 overflow-y 해제)
             const logSectionStyle = logSection.style;
             const originalMaxHeight = logSectionStyle.maxHeight;
             const originalOverflowY = logSectionStyle.overflowY;
 
-            // 모바일 환경을 포함하여 모든 높이 제한 및 스크롤 해제
             logSectionStyle.maxHeight = 'none';
             logSectionStyle.overflowY = 'visible';
 
             const originalBodyOverflow = document.body.style.overflow;
-            document.body.style.overflow = 'hidden'; // 이미지 캡처 중 스크롤 방지
+            document.body.style.overflow = 'hidden'; 
 
             const originalScrollY = window.scrollY;
             window.scrollTo(0, 0); 
@@ -523,7 +542,7 @@
                 useCORS: true,
                 backgroundColor: '#ffffff'
             }).then(canvas => {
-                // 3. 원래 상태로 복구
+                // 원래 상태로 복구
                 logSection.querySelectorAll('.edit-log-btn').forEach(btn => btn.style.display = '');
                 saveImageBtn.style.display = '';
                 
@@ -532,7 +551,7 @@
                 document.body.style.overflow = originalBodyOverflow;
                 window.scrollTo(0, originalScrollY);
                 
-                // 4. 이미지 다운로드
+                // 이미지 다운로드
                 const imageURL = canvas.toDataURL('image/png');
                 const a = document.createElement('a');
                 a.href = imageURL;
@@ -583,9 +602,14 @@
             }
         });
 
-        // 초기 실행: 마지막 사용자 ID로 자동 로드
+        // --- 초기 실행 로직 ---
         setTimer(minutesInput.value);
         setLogTitle();
+        
+        // 1. 이전 날짜 기록 초기화 확인 및 실행
+        clearPreviousDayLogs();
+        
+        // 2. 마지막 사용자 ID로 자동 로드
         const lastUserId = localStorage.getItem('lastUserId');
         if (lastUserId) {
             userIdInput.value = lastUserId;
