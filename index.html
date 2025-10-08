@@ -6,23 +6,15 @@
     <title>Pomodoro Timer</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- HTML을 이미지로 캡처하기 위한 라이브러리 -->
+    <!-- HTML to image capture library -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap');
         
-        /* 커스텀 컬러 팔레트 */
-        .color-fresh-leaf { background-color: #339551; }
-        .color-basil { background-color: #266533; }
-        .color-lemons { background-color: #E1DC53; }
-        .color-passata { background-color: #F16838; }
-        .hover\:bg-basil:hover { background-color: #266533; }
-        .focus\:border-passata:focus { border-color: #F16838; }
-
-        /* 기본 레이아웃 및 반응형 설정 */
+        /* Basic layout and responsive settings */
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #f3f4f6; /* 밝은 회색 배경 유지 */
+            background-color: #f0fdf4; 
             display: flex;
             justify-content: center;
             align-items: center;
@@ -50,13 +42,14 @@
             flex-direction: column;
             align-items: center;
             text-align: center;
+            background-color: #ffffff; 
         }
         .log-section {
             overflow-y: auto;
             text-align: left;
         }
         
-        /* PC (min-width: 768px) 반응형 스타일 */
+        /* PC (min-width: 768px) responsive styles */
         @media (min-width: 768px) {
             body {
                 align-items: flex-start;
@@ -77,48 +70,108 @@
             }
         }
         
-        /* 타이머 원 색상 변경 */
+        /* Timer and input element styles */
+        .timer-display {
+            position: relative;
+            width: 250px;
+            height: 250px;
+            margin-bottom: 1.5rem;
+            border-radius: 50%; /* Make it a circle */
+            background-color: #000000; /* Black inner circle */
+        }
+        .timer-display .circle-bg {
+            fill: none;
+            stroke: #4b5563; /* Darker gray track for contrast */
+            stroke-width: 10px;
+        }
         .timer-display .circle-progress {
             fill: none;
-            stroke: #339551; /* Fresh Leaf */
+            stroke: #22c55e;
             stroke-width: 10px;
             stroke-linecap: round;
             transform: rotate(-90deg);
             transform-origin: 50% 50%;
             transition: stroke-dashoffset 0.5s linear;
         }
-
-        /* 기록 제목 폰트 크기 조정 (모바일) */
-        .log-header-container h2 {
-            font-size: 1.5rem; /* 기본 폰트 크기 (PC) */
+        .timer-time-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 3rem;
+            font-weight: bold;
+            color: #ffffff; /* White text for contrast */
         }
-        
-        @media (max-width: 767px) {
-            .log-header-container {
-                flex-direction: column; /* 모바일에서 세로 배열 */
-                align-items: flex-start; /* 왼쪽 정렬 */
-                gap: 0.5rem;
-            }
-            .log-header-container h2 {
-                font-size: 1.25rem; /* 나의 시간 기록 폰트 작게 (text-xl) */
-            }
-            #log-date-picker {
-                font-size: 0.875rem; /* 날짜 폰트 더 작게 (text-sm) */
-                max-width: 100%;
-                text-align: left;
-            }
+        .timer-input-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 1rem;
         }
-
+        .timer-input {
+            width: 100px;
+            text-align: center;
+            font-size: 1.5rem;
+            padding: 0.5rem;
+            border: 2px solid #d1d5db;
+            border-radius: 0.75rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .timer-input:focus {
+            border-color: #22c55e;
+        }
+        .reflection-input {
+            width: 100%;
+            height: 100px;
+            padding: 0.75rem;
+            border: 2px solid #d1d5db;
+            border-radius: 0.75rem;
+            resize: none;
+            outline: none;
+            margin-top: 1rem;
+            transition: border-color 0.2s;
+        }
+        .reflection-input:focus {
+            border-color: #22c55e;
+        }
+        .log-list-item {
+            background-color: #f9fafb;
+            padding: 1rem;
+            border-radius: 0.75rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+            border: 2px solid transparent; 
+        }
+        .log-list-item.editing {
+            border: 2px solid #22c55e; 
+            background-color: #dcfce7; 
+        }
+        #save-image-btn {
+            background-color: #16a34a;
+        }
+        #save-image-btn:hover {
+            background-color: #15803d;
+        }
         .timer-input-group.w-full.max-w-xs.mx-auto label {
             align-self: flex-start;
         }
         
-        /* 날짜 선택기 스타일링 */
         #log-date-picker {
+            padding: 0.5rem;
             border: 2px solid #d1d5db;
+            border-radius: 0.5rem;
+            outline: none;
+            cursor: pointer;
+            font-size: 1rem;
+            text-align: center;
+            flex-grow: 1; 
+            max-width: 150px; 
+        }
+        #log-date-picker:focus {
+            border-color: #3b82f6;
         }
 
-        /* 기록 헤더 정렬을 위한 스타일 */
         .log-header-container {
             display: flex;
             justify-content: space-between; 
@@ -126,22 +179,31 @@
             width: 100%; 
             margin-bottom: 1rem;
         }
-
-        /* 수정 중인 항목 시각적 표시 */
-        .log-list-item.editing {
-            border: 2px solid #266533; /* Basil 색상으로 테두리 변경 */
-            background-color: #f6f4dc40; /* Cream 색상 기반으로 변경 */
-        }
         .log-buttons {
             display: flex;
             gap: 0.5rem; 
             margin-top: 0.5rem;
         }
-        .delete-log-btn {
-            background-color: #F16838; /* Passata */
+
+        .custom-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
         }
-        .delete-log-btn:hover {
-            background-color: #C64F25; 
+        .custom-modal-content {
+            background-color: white;
+            padding: 2rem;
+            border-radius: 1rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            max-width: 90%;
         }
     </style>
 </head>
@@ -160,32 +222,30 @@
             </div>
 
             <div class="flex flex-col items-center w-full">
-                <!-- 사용자 이름 입력 필드 -->
+                <!-- User name input field -->
                 <div class="timer-input-group w-full max-w-xs mx-auto">
                     <label for="user-id" class="text-gray-600 mb-2">사용자 이름 (필수):</label>
-                    <input type="text" id="user-id" placeholder="나만의 닉네임" class="w-full p-2 border-2 border-gray-300 rounded-lg focus:border-passata text-left" required>
+                    <input type="text" id="user-id" placeholder="나만의 닉네임" class="w-full p-2 border-2 border-gray-300 rounded-lg focus:border-green-500 text-left" required>
                 </div>
-                <!-- 활동 내용 입력 필드 -->
+                <!-- Activity content input field -->
                 <div class="timer-input-group w-full max-w-xs mx-auto"> 
                     <label for="activity" class="text-gray-600 mb-2">활동 내용:</label>
-                    <input type="text" id="activity" placeholder="예) 문서 작업" class="w-full p-2 border-2 border-gray-300 rounded-lg focus:border-passata text-left">
+                    <input type="text" id="activity" placeholder="예) 문서 작업" class="w-full p-2 border-2 border-gray-300 rounded-lg focus:border-green-500 text-left">
                 </div>
 
-                <!-- 수정 중 메시지 표시 영역 -->
-                <p id="edit-message" class="text-sm text-red-500 font-semibold h-5 mb-2 hidden">
-                    <!-- 메시지가 여기에 표시됩니다. -->
+                <!-- Area for displaying editing message -->
+                <p id="edit-message" class="text-sm font-semibold h-5 mb-2 hidden">
+                    <!-- Message will be displayed here. -->
                 </p>
                 
                 <div class="flex space-x-4 mt-4 w-full justify-center">
-                    <!-- 시작 버튼: Basil (#266533) -->
-                    <button id="start-btn" class="color-basil hover:bg-green-700 text-white font-bold py-2 px-6 rounded-xl transition duration-300 transform hover:scale-105 shadow-md">
+                    <button id="start-btn" class="bg-green-700 hover:bg-green-800 text-white font-bold py-2 px-6 rounded-xl transition duration-300 transform hover:scale-105 shadow-md">
                         시작
                     </button>
                     <button id="stop-btn" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-6 rounded-xl transition duration-300 transform hover:scale-105 shadow-md">
                         중지
                     </button>
-                    <!-- 재설정 버튼: Passata (#F16838) -->
-                    <button id="reset-btn" class="color-passata hover:bg-red-700 text-white font-bold py-2 px-6 rounded-xl transition duration-300 transform hover:scale-105 shadow-md">
+                    <button id="reset-btn" class="bg-orange-500 hover:bg-orange-600 text-white font-bold py-2 px-6 rounded-xl transition duration-300 transform hover:scale-105 shadow-md">
                         재설정
                     </button>
                 </div>
@@ -195,21 +255,19 @@
                 </div>
             </div>
             
-            <!-- 성찰 입력 영역 -->
+            <!-- Reflection input area -->
             <div id="reflection-area" class="w-full hidden">
                 <label for="reflection" class="text-gray-600 mt-4 mb-2">활동 성찰:</label>
-                <textarea id="reflection" class="reflection-input focus:border-passata" placeholder="이 세션 동안 어떤 점을 잘했고, 아쉬운 점은 무엇인가요?"></textarea>
+                <textarea id="reflection" class="reflection-input" placeholder="이 세션 동안 어떤 점을 잘했고, 아쉬운 점은 무엇인가요?"></textarea>
                 
-                <!-- 성찰 완료 버튼: Fresh Leaf (#339551) -->
-                <button id="complete-reflection-btn" class="color-fresh-leaf hover:bg-green-700 text-white font-bold py-2 px-6 rounded-xl transition duration-300 transform hover:scale-105 shadow-md mt-4">
+                <button id="complete-reflection-btn" class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-6 rounded-xl transition duration-300 transform hover:scale-105 shadow-md mt-4">
                     성찰 완료
                 </button>
             </div>
         </div>
         
-        <!-- Log Section: 이미지 캡처 대상 -->
+        <!-- Log Section: Image capture target -->
         <div class="log-section" id="log-section">
-            <!-- UI 수정 반영: 제목과 날짜 선택기를 세로로 배치 (모바일) -->
             <div class="log-header-container">
                 <h2 id="log-title" class="text-2xl font-bold text-gray-800">나의 시간 기록</h2>
                 <input type="date" id="log-date-picker" class="text-gray-700" title="기록을 볼 날짜를 선택하세요">
@@ -218,17 +276,17 @@
                 <!-- Log entries will be added here -->
             </ul>
             
-            <!-- 최종 이미지 저장 버튼: Basil (#266533) -->
-            <button id="save-image-btn" class="color-basil hover:bg-green-700 text-white font-bold py-2 px-6 rounded-xl transition duration-300 transform hover:scale-105 shadow-md mt-4">
+            <!-- Final image save button -->
+            <button id="save-image-btn" class="w-full text-white font-bold py-2 px-6 rounded-xl transition duration-300 transform hover:scale-105 shadow-md mt-4">
                 기록 전체 이미지로 저장
             </button>
         </div>
     </div>
 
     <script>
-        // 🚨 오디오 URL (index.html과 같은 경로)
+        // 🚨 Set the audio URL to a relative path (same path as index.html)
         const AUDIO_URL = 'timeIsUp.MP3';
-        let timeUpSound = null;
+        let timeUpSound = null; // Initialize Audio object as null to create it later
 
         const minutesInput = document.getElementById('minutes');
         const activityInput = document.getElementById('activity');
@@ -255,16 +313,17 @@
         let startTime = null;
         let currentUserId = ''; 
         let pendingLogData = null; 
-        let logIdToEdit = null;     
+        let logIdToEdit = null;    
         let viewingDate = getTodayDateString(); 
         const radius = 45;
         const circumference = 2 * Math.PI * radius;
 
-        // --- 오디오 제어 헬퍼 ---
+        // --- Audio Control Helper ---
         function initializeAudio() {
             if (!timeUpSound) {
+                // Create Audio object using the audio URL
                 timeUpSound = new Audio(AUDIO_URL);
-                timeUpSound.loop = true;
+                timeUpSound.loop = true; // Set the alarm to repeat
             }
         }
         
@@ -275,7 +334,7 @@
             }
         }
 
-        // --- 커스텀 알림 함수 (오디오 제어 포함) ---
+        // --- Custom Alert Function (with audio control) ---
         function customAlert(message, onConfirm = () => {}) {
             const existingModal = document.querySelector('.custom-modal-overlay');
             if (existingModal) existingModal.remove();
@@ -288,13 +347,13 @@
             
             modalContent.innerHTML = `
                 <p class="text-lg font-bold mb-4">${message}</p>
-                <button id="modal-confirm-btn" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg transition duration-300">확인</button>
+                <button id="modal-confirm-btn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition duration-300">확인</button>
             `;
             
             const confirmBtn = modalContent.querySelector('#modal-confirm-btn');
             
             confirmBtn.onclick = () => {
-                stopAudio();
+                stopAudio(); // 🚨 Stop audio on confirm button click
                 modalOverlay.remove();
                 onConfirm(); 
             };
@@ -303,7 +362,7 @@
             document.body.appendChild(modalOverlay);
         }
         
-        // --- 데이터 관리 함수 (Local Storage) ---
+        // --- Data Management Functions (Local Storage) ---
 
         function getAllLogs() {
             try {
@@ -346,7 +405,7 @@
             const allLogs = getAllLogs();
             
             const userLogs = allLogs.filter(log => log.userId === userId && log.dateString === dateString)
-                                    .sort((a, b) => b.timestamp - a.timestamp);
+                                      .sort((a, b) => b.timestamp - a.timestamp);
 
             userLogs.forEach(logData => {
                 appendLogToDisplay(logData);
@@ -363,10 +422,10 @@
             
             const buttons = isToday ? `
                 <div class="log-buttons">
-                    <button data-log-id="${logData.id}" class="edit-log-btn color-lemons hover:bg-yellow-600 text-black text-xs py-1 px-3 rounded-lg">
+                    <button data-log-id="${logData.id}" class="edit-log-btn bg-gray-500 hover:bg-gray-600 text-white text-xs py-1 px-3 rounded-lg">
                         기록 수정
                     </button>
-                    <button data-log-id="${logData.id}" class="delete-log-btn text-white text-xs py-1 px-3 rounded-lg">
+                    <button data-log-id="${logData.id}" class="delete-log-btn bg-orange-500 hover:bg-orange-600 text-white text-xs py-1 px-3 rounded-lg">
                         기록 삭제
                     </button>
                 </div>
@@ -384,7 +443,7 @@
             logList.prepend(logItem);
         }
         
-        // --- 날짜 관리 함수 ---
+        // --- Date Management Functions ---
         function getTodayDateString(date = new Date()) {
             const year = date.getFullYear();
             const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -405,6 +464,7 @@
                 const allLogs = getAllLogs();
                 const lastUserId = localStorage.getItem('lastUserId');
                 
+                // Backup existing data then clear (for Local Storage size management)
                 localStorage.clear();
                 
                 localStorage.setItem('allPomodoroLogs', JSON.stringify(allLogs)); 
@@ -416,7 +476,7 @@
             localStorage.setItem('lastAccessedDate', todayDate);
         }
 
-        // --- 핵심 타이머 및 UI 함수 ---
+        // --- Core Timer and UI Functions ---
 
         function formatTime(date) {
             let hours = date.getHours();
@@ -471,7 +531,7 @@
                 setTimer(minutesInput.value);
             }
             
-            // 오디오 초기화 및 권한 확보 시도
+            // Initialize audio and attempt to get permission
             initializeAudio(); 
             timeUpSound.play().then(() => {
                 timeUpSound.pause();
@@ -500,7 +560,7 @@
                     
                     activityInput.value = ''; 
 
-                    // 🚨 소리 재생 시작
+                    // 🚨 Start playing sound
                     if (timeUpSound) {
                         timeUpSound.play().catch(e => console.error("Sound play failed:", e));
                     }
@@ -523,7 +583,7 @@
             activityInput.value = '';
         }
 
-        // 수정/생성/삭제 후 공통 초기화
+        // Common reset after create/update/delete
         function resetEditContext() {
             reflectionArea.classList.add('hidden');
             pendingLogData = null;
@@ -538,7 +598,7 @@
             });
         }
 
-        // 기록 수정 버튼 클릭 이벤트 리스너 설정
+        // Set up event listeners for edit log buttons
         function setupEditLogListeners() {
             logList.querySelectorAll('.edit-log-btn').forEach(button => {
                 button.removeEventListener('click', handleEditLog);
@@ -550,7 +610,7 @@
             });
         }
 
-        // 기록 삭제 클릭 핸들러
+        // Delete log click handler
         function handleDeleteClick(e) {
             const logId = parseInt(e.target.dataset.logId);
             const logItem = e.target.closest('.log-list-item');
@@ -561,7 +621,7 @@
             }
         }
 
-        // 기록 수정 버튼 처리 함수 (Alert 제거 및 UI 전환)
+        // Edit log button handler (Remove Alert and switch UI)
         function handleEditLog(e) {
             resetEditContext();
             
@@ -581,7 +641,7 @@
                 
                 completeReflectionBtn.textContent = '기록 완료/수정'; 
                 editMessage.innerHTML = `
-                    <span class="text-blue-600">"${logToEdit.activity}"</span> 기록을 수정 중입니다.
+                    <span class="text-teal-700">"${logToEdit.activity}"</span> 기록을 수정 중입니다.
                 `;
                 editMessage.classList.remove('hidden');
 
@@ -590,7 +650,7 @@
         }
 
 
-        // 성찰 완료/수정 버튼 클릭 시 호출될 함수 (신규 생성 또는 기존 수정)
+        // Function to be called on reflection complete/edit button click (new create or existing edit)
         function completeReflection() {
             const reflectionText = reflectionInput.value.trim();
             const currentActivityValue = activityInput.value.trim();
@@ -601,7 +661,7 @@
             }
 
             if (logIdToEdit) {
-                // --- 기존 로그 수정 모드 ---
+                // --- Existing log edit mode ---
                 const allLogs = getAllLogs();
                 const logToUpdate = allLogs.find(log => log.id === logIdToEdit);
                 
@@ -619,7 +679,7 @@
                 }
             
             } else if (pendingLogData) {
-                // --- 신규 로그 생성 모드 ---
+                // --- New log create mode ---
                 
                 pendingLogData.reflection = reflectionText;
                 pendingLogData.activity = currentActivityValue; 
@@ -636,12 +696,14 @@
             activityInput.value = '';
         }
         
-        // --- 이미지 저장 기능 (HTML2Canvas 사용) ---
+        // --- Image Save Feature (using HTML2Canvas) ---
         function captureAndSaveImage() {
             if (logList.children.length === 0) {
                 customAlert("저장할 기록이 없습니다. 먼저 활동을 기록해주세요.");
                 return;
             }
+            
+            // Temporarily hide or disable all buttons and scrollbars before capture
             
             logSection.querySelectorAll('.edit-log-btn, .delete-log-btn').forEach(btn => btn.style.display = 'none');
             saveImageBtn.style.display = 'none';
@@ -665,6 +727,7 @@
                 useCORS: true,
                 backgroundColor: '#ffffff'
             }).then(canvas => {
+                // Restore original state
                 logSection.querySelectorAll('.edit-log-btn, .delete-log-btn').forEach(btn => btn.style.display = '');
                 saveImageBtn.style.display = '';
                 
@@ -685,6 +748,7 @@
                 
                 customAlert('기록 전체가 이미지 파일로 저장되었습니다!');
             }).catch(error => {
+                // Also restore original state on error
                 logSection.querySelectorAll('.edit-log-btn, .delete-log-btn').forEach(btn => btn.style.display = '');
                 saveImageBtn.style.display = '';
                 logSectionStyle.maxHeight = originalMaxHeight;
@@ -692,12 +756,12 @@
                 document.body.style.overflow = originalBodyOverflow;
                 window.scrollTo(0, originalScrollY); 
                 
-                console.error('이미지 저장 오류:', error);
+                console.error('Image save error:', error);
                 customAlert('이미지 저장에 실패했습니다. 브라우저 콘솔을 확인해주세요.');
             });
         }
         
-        // --- 이벤트 리스너 설정 ---
+        // --- Event Listener Setup ---
 
         userIdInput.addEventListener('input', () => {
             currentUserId = userIdInput.value.trim();
@@ -736,7 +800,7 @@
             }
         });
 
-        // --- 초기 실행 로직 ---
+        // --- Initial Execution Logic ---
         setTimer(minutesInput.value);
         
         handleDateChangeOnLoad();
@@ -753,8 +817,9 @@
             loadUserLogs(currentUserId, viewingDate);
         }
 
-        // 초기 오디오 객체 생성
+        // Initialize audio object
         initializeAudio();
     </script>
 </body>
 </html>
+
