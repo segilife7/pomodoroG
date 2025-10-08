@@ -4,7 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pomodoro Timer</title>
+    <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- HTML을 이미지로 캡처하기 위한 라이브러리 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap');
@@ -34,6 +36,8 @@
             box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
             padding: 1.5rem;
             flex-shrink: 0;
+        }
+        .timer-section {
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -150,10 +154,47 @@
         .timer-input-group.w-full.max-w-xs.mx-auto label {
             align-self: flex-start;
         }
+        
+        /* 날짜 선택기 스타일링 */
+        #log-date-picker {
+            padding: 0.5rem;
+            border: 2px solid #d1d5db;
+            border-radius: 0.5rem;
+            outline: none;
+            cursor: pointer;
+            font-size: 1rem;
+            text-align: center;
+            flex-grow: 1; 
+            max-width: 150px; 
+        }
+        #log-date-picker:focus {
+            border-color: #3b82f6;
+        }
+
+        /* 기록 헤더 정렬을 위한 스타일 */
+        .log-header-container {
+            display: flex;
+            justify-content: space-between; 
+            align-items: center;
+            width: 100%; 
+            margin-bottom: 1rem;
+        }
+        .log-buttons {
+            display: flex;
+            gap: 0.5rem; /* 버튼 사이 간격 추가 */
+            margin-top: 0.5rem;
+        }
+        .delete-log-btn {
+            background-color: #f87171; /* Tailwind red-400 */
+        }
+        .delete-log-btn:hover {
+            background-color: #ef4444; /* Tailwind red-500 */
+        }
     </style>
 </head>
 <body>
     <div class="main-container">
+        <!-- Timer Section -->
         <div class="timer-section">
             <h1 class="text-3xl font-bold text-gray-900 mb-4">포모도로 타이머</h1>
 
@@ -166,17 +207,21 @@
             </div>
 
             <div class="flex flex-col items-center w-full">
+                <!-- 사용자 이름 입력 필드 -->
                 <div class="timer-input-group w-full max-w-xs mx-auto">
                     <label for="user-id" class="text-gray-600 mb-2">사용자 이름 (필수):</label>
                     <input type="text" id="user-id" placeholder="나만의 닉네임" class="w-full p-2 border-2 border-gray-300 rounded-lg focus:border-red-500 text-left" required>
                 </div>
+                <!-- 활동 내용 입력 필드 -->
                 <div class="timer-input-group w-full max-w-xs mx-auto"> 
                     <label for="activity" class="text-gray-600 mb-2">활동 내용:</label>
                     <input type="text" id="activity" placeholder="예) 문서 작업" class="w-full p-2 border-2 border-gray-300 rounded-lg focus:border-red-500 text-left">
                 </div>
 
+                <!-- 수정 중 메시지 표시 영역 -->
                 <p id="edit-message" class="text-sm text-red-500 font-semibold h-5 mb-2 hidden">
-                    </p>
+                    <!-- 메시지가 여기에 표시됩니다. -->
+                </p>
                 
                 <div class="flex space-x-4 mt-4 w-full justify-center">
                     <button id="start-btn" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-6 rounded-xl transition duration-300 transform hover:scale-105 shadow-md">
@@ -195,6 +240,7 @@
                 </div>
             </div>
             
+            <!-- 성찰 입력 영역 -->
             <div id="reflection-area" class="w-full hidden">
                 <label for="reflection" class="text-gray-600 mt-4 mb-2">활동 성찰:</label>
                 <textarea id="reflection" class="reflection-input" placeholder="이 세션 동안 어떤 점을 잘했고, 아쉬운 점은 무엇인가요?"></textarea>
@@ -205,11 +251,17 @@
             </div>
         </div>
         
+        <!-- Log Section: 이미지 캡처 대상 -->
         <div class="log-section" id="log-section">
-            <h2 id="log-title" class="text-2xl font-bold text-gray-800 mb-4">나의 시간 기록</h2>
+            <div class="log-header-container">
+                <h2 id="log-title" class="text-2xl font-bold text-gray-800">나의 시간 기록</h2>
+                <input type="date" id="log-date-picker" class="text-gray-700" title="기록을 볼 날짜를 선택하세요">
+            </div>
             <ul id="log-list">
-                </ul>
+                <!-- Log entries will be added here -->
+            </ul>
             
+            <!-- 최종 이미지 저장 버튼 -->
             <button id="save-image-btn" class="w-full text-white font-bold py-2 px-6 rounded-xl transition duration-300 transform hover:scale-105 shadow-md mt-4">
                 기록 전체 이미지로 저장
             </button>
@@ -233,6 +285,7 @@
         const logTitle = document.getElementById('log-title');
         const logSection = document.getElementById('log-section');
         const editMessage = document.getElementById('edit-message');
+        const logDatePicker = document.getElementById('log-date-picker');
 
         let timer;
         let totalTime;
@@ -242,6 +295,7 @@
         let currentUserId = ''; 
         let pendingLogData = null; 
         let logIdToEdit = null;     
+        let viewingDate = getTodayDateString(); 
         const radius = 45;
         const circumference = 2 * Math.PI * radius;
         
@@ -257,21 +311,40 @@
             }
         }
         
-        function saveUserLogs(newLog) {
-            const allLogs = getAllLogs();
-            allLogs.push(newLog);
+        function updateAndSaveLogs(logData) {
+            let allLogs = getAllLogs();
+            
+            const existingIndex = allLogs.findIndex(log => log.id === logData.id);
+            
+            if (existingIndex > -1) {
+                allLogs[existingIndex] = logData; // 기존 로그 업데이트
+            } else {
+                allLogs.push(logData); // 새로운 로그 추가
+            }
+            
             localStorage.setItem('allPomodoroLogs', JSON.stringify(allLogs));
         }
 
-        function loadUserLogs(userId) {
+        function deleteLogById(logIdToDelete) {
+            let allLogs = getAllLogs();
+            
+            // 삭제할 로그를 제외하고 새로운 배열 생성
+            const filteredLogs = allLogs.filter(log => log.id !== logIdToDelete);
+            
+            localStorage.setItem('allPomodoroLogs', JSON.stringify(filteredLogs));
+            
+            // 삭제 후 목록 새로고침
+            loadUserLogs(currentUserId, viewingDate);
+        }
+
+        // 선택된 날짜의 기록만 로드합니다.
+        function loadUserLogs(userId, dateString) {
             logList.innerHTML = '';
             if (!userId) return;
 
             const allLogs = getAllLogs();
             
-            // 오늘 날짜에 해당하는 기록만 필터링합니다. (새로운 로직)
-            const todayDate = getTodayDateString(); 
-            const userLogs = allLogs.filter(log => log.userId === userId && log.dateString === todayDate)
+            const userLogs = allLogs.filter(log => log.userId === userId && log.dateString === dateString)
                                     .sort((a, b) => b.timestamp - a.timestamp);
 
             userLogs.forEach(logData => {
@@ -284,6 +357,21 @@
             const logItem = document.createElement('li');
             logItem.className = 'log-list-item';
             logItem.dataset.logId = logData.id;
+            
+            const isToday = logData.dateString === getTodayDateString();
+            
+            // 수정 및 삭제 버튼 그룹
+            const buttons = isToday ? `
+                <div class="log-buttons">
+                    <button data-log-id="${logData.id}" class="edit-log-btn bg-yellow-500 hover:bg-yellow-600 text-white text-xs py-1 px-3 rounded-lg">
+                        기록 수정
+                    </button>
+                    <button data-log-id="${logData.id}" class="delete-log-btn text-white text-xs py-1 px-3 rounded-lg">
+                        기록 삭제
+                    </button>
+                </div>
+            ` : '';
+
             logItem.innerHTML = `
                 <p class="text-sm text-gray-500 mb-1">
                     <span class="font-semibold">시작시간:</span> ${logData.formattedStartTime} | 
@@ -291,39 +379,42 @@
                 </p>
                 <h3 class="font-bold text-gray-900 mb-1">활동내용: ${logData.activity} (${logData.durationMinutes}분)</h3>
                 <p class="text-gray-700">성찰내용: ${logData.reflection.replace(/\n/g, '<br>') || '성찰 내용 없음'}</p>
-                <button data-log-id="${logData.id}" class="edit-log-btn bg-yellow-500 hover:bg-yellow-600 text-white text-xs py-1 px-3 rounded-lg mt-2">
-                    기록 수정
-                </button>
+                ${buttons}
             `;
             logList.prepend(logItem);
         }
         
-        // --- 날짜 관리 함수 (추가) ---
-        function getTodayDateString() {
-            const today = new Date();
-            const year = today.getFullYear();
-            const month = String(today.getMonth() + 1).padStart(2, '0');
-            const day = String(today.getDate()).padStart(2, '0');
+        // --- 날짜 관리 함수 ---
+        function getTodayDateString(date = new Date()) {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
             return `${year}-${month}-${day}`;
         }
         
-        // --- 이전 날짜 기록 초기화 로직 (핵심 수정) ---
-        function clearPreviousDayLogs() {
+        function updateLogTitle(dateString) {
+            const dateParts = dateString.split('-');
+            logTitle.textContent = `나의 시간 기록 (${dateParts[0]}.${dateParts[1]}.${dateParts[2]})`;
+        }
+
+        function handleDateChangeOnLoad() {
             const todayDate = getTodayDateString();
             const lastAccessedDate = localStorage.getItem('lastAccessedDate');
             
             if (lastAccessedDate && lastAccessedDate !== todayDate) {
-                // 날짜가 바뀌었으면 모든 기록 초기화 (단, 사용자 ID는 보존)
+                // 날짜가 바뀔 때 모든 기록을 유지하고 사용자 ID만 보존하는 로직
+                const allLogs = getAllLogs();
                 const lastUserId = localStorage.getItem('lastUserId');
+                
                 localStorage.clear();
+                
+                // 모든 기록 복원
+                localStorage.setItem('allPomodoroLogs', JSON.stringify(allLogs)); 
                 if (lastUserId) {
                     localStorage.setItem('lastUserId', lastUserId);
                 }
-                // 이전 날짜 기록 초기화 알림 (필요 시)
-                // alert("날짜가 바뀌어 이전 기록을 초기화했습니다.");
             }
             
-            // 마지막 접속 날짜를 오늘로 업데이트
             localStorage.setItem('lastAccessedDate', todayDate);
         }
 
@@ -338,14 +429,6 @@
             return `${ampm} ${hours}:${minutes}`;
         }
         
-        function setLogTitle() {
-            const today = new Date();
-            const year = today.getFullYear();
-            const month = String(today.getMonth() + 1).padStart(2, '0');
-            const day = String(today.getDate()).padStart(2, '0');
-            logTitle.textContent = `나의 시간 기록 (${year}.${month}.${day})`;
-        }
-
         function setTimer(minutes) {
             totalTime = minutes * 60;
             timeRemaining = totalTime;
@@ -364,6 +447,11 @@
         }
 
         function startTimer() {
+            if (viewingDate !== getTodayDateString()) {
+                alert('타이머는 현재 보고 있는 날짜(오늘)에서만 시작할 수 있습니다. 날짜를 오늘로 변경해주세요.');
+                return;
+            }
+
             currentUserId = userIdInput.value.trim();
             if (!currentUserId) {
                 alert('사용자 이름(닉네임)을 먼저 입력해주세요.');
@@ -399,10 +487,12 @@
                         timestamp: new Date().getTime(),
                         formattedStartTime: formatTime(startTime),
                         formattedEndTime: formatTime(new Date()),
-                        dateString: getTodayDateString(), // 날짜 문자열 저장
+                        dateString: getTodayDateString(), 
                         reflection: ''
                     };
                     
+                    activityInput.value = ''; 
+
                     alert('시간이 종료되었습니다! 활동 성찰을 기록하고 [성찰 완료] 버튼을 눌러주세요.');
                     reflectionArea.classList.remove('hidden');
                 }
@@ -420,7 +510,7 @@
             activityInput.value = '';
         }
 
-        // 수정 모드 종료 및 UI 초기화
+        // 수정/생성/삭제 후 공통 초기화
         function resetEditContext() {
             reflectionArea.classList.add('hidden');
             pendingLogData = null;
@@ -435,12 +525,30 @@
             });
         }
 
-        // 기록 수정 버튼 클릭 이벤트 리스너 설정
+        // 기록 수정 및 삭제 버튼 이벤트 리스너 설정
         function setupEditLogListeners() {
             logList.querySelectorAll('.edit-log-btn').forEach(button => {
                 button.removeEventListener('click', handleEditLog);
                 button.addEventListener('click', handleEditLog);
             });
+            logList.querySelectorAll('.delete-log-btn').forEach(button => {
+                button.removeEventListener('click', handleDeleteClick);
+                button.addEventListener('click', handleDeleteClick);
+            });
+        }
+
+        // 기록 삭제 클릭 핸들러
+        function handleDeleteClick(e) {
+            const logId = parseInt(e.target.dataset.logId);
+            const logItem = e.target.closest('.log-list-item');
+            const activityName = logItem.querySelector('h3').textContent.split('(')[0].replace('활동내용: ', '').trim();
+            
+            // custom modal 대신 임시로 alert을 사용하여 사용자에게 확인
+            const confirmation = confirm(`"${activityName}" 기록을 정말 삭제하시겠습니까?`);
+            
+            if (confirmation) {
+                deleteLogById(logId);
+            }
         }
 
         // 기록 수정 버튼 처리 함수 (Alert 제거 및 UI 전환)
@@ -485,13 +593,18 @@
             if (logIdToEdit) {
                 // --- 기존 로그 수정 모드 ---
                 const allLogs = getAllLogs();
-                const indexToUpdate = allLogs.findIndex(log => log.id === logIdToEdit);
+                const logToUpdate = allLogs.find(log => log.id === logIdToEdit);
                 
-                if (indexToUpdate > -1) {
-                    allLogs[indexToUpdate].reflection = reflectionText;
-                    allLogs[indexToUpdate].activity = currentActivityValue; 
-                    localStorage.setItem('allPomodoroLogs', JSON.stringify(allLogs));
-                    loadUserLogs(currentUserId);
+                if (logToUpdate) {
+                    logToUpdate.reflection = reflectionText;
+                    logToUpdate.activity = currentActivityValue; 
+                    // 로컬 스토리지에 직접 업데이트
+                    const index = allLogs.findIndex(log => log.id === logToUpdate.id);
+                    if (index > -1) {
+                         allLogs[index] = logToUpdate;
+                         localStorage.setItem('allPomodoroLogs', JSON.stringify(allLogs));
+                    }
+                    loadUserLogs(currentUserId, viewingDate);
                 } else {
                      alert('수정할 로그를 찾을 수 없습니다.');
                 }
@@ -499,16 +612,14 @@
             } else if (pendingLogData) {
                 // --- 신규 로그 생성 모드 ---
                 
-                // 1. 임시 데이터에 성찰 내용을 추가하여 최종 로그 생성
                 pendingLogData.reflection = reflectionText;
                 pendingLogData.activity = currentActivityValue; 
                 
-                // 2. 저장하고 표시
-                saveUserLogs(pendingLogData);
-                loadUserLogs(currentUserId);
+                updateAndSaveLogs(pendingLogData);
+                loadUserLogs(currentUserId, viewingDate);
                 
             } else {
-                alert('저장하거나 수정할 활동 기록을 찾을 수 없습니다. 타이머를 먼저 시작해주세요.');
+                alert('저장하거나 수정할 활동 기록을 찾을 수 없습니다. 타이머를 먼저 시작하거나 수정 버튼을 눌러주세요.');
                 return; 
             }
             
@@ -518,9 +629,14 @@
         
         // --- 이미지 저장 기능 (HTML2Canvas 사용) ---
         function captureAndSaveImage() {
+            if (logList.children.length === 0) {
+                alert("저장할 기록이 없습니다. 먼저 활동을 기록해주세요.");
+                return;
+            }
+            
             // 캡처 전, 모든 버튼과 스크롤을 임시로 숨기거나 해제합니다.
             
-            logSection.querySelectorAll('.edit-log-btn').forEach(btn => btn.style.display = 'none');
+            logSection.querySelectorAll('.edit-log-btn, .delete-log-btn').forEach(btn => btn.style.display = 'none'); // 삭제 버튼도 숨김
             saveImageBtn.style.display = 'none';
             
             const logSectionStyle = logSection.style;
@@ -543,7 +659,7 @@
                 backgroundColor: '#ffffff'
             }).then(canvas => {
                 // 원래 상태로 복구
-                logSection.querySelectorAll('.edit-log-btn').forEach(btn => btn.style.display = '');
+                logSection.querySelectorAll('.edit-log-btn, .delete-log-btn').forEach(btn => btn.style.display = '');
                 saveImageBtn.style.display = '';
                 
                 logSectionStyle.maxHeight = originalMaxHeight;
@@ -556,7 +672,7 @@
                 const a = document.createElement('a');
                 a.href = imageURL;
                 const timestamp = new Date().toISOString().slice(0, 19).replace(/[:T-]/g, '');
-                a.download = `pomodoro_log_${currentUserId}_${timestamp}.png`;
+                a.download = `pomodoro_log_${currentUserId}_${logDatePicker.value}_${timestamp}.png`;
                 
                 document.body.appendChild(a);
                 a.click();
@@ -565,7 +681,7 @@
                 alert('기록 전체가 이미지 파일로 저장되었습니다!');
             }).catch(error => {
                 // 오류 발생 시에도 원래 상태로 복구
-                logSection.querySelectorAll('.edit-log-btn').forEach(btn => btn.style.display = '');
+                logSection.querySelectorAll('.edit-log-btn, .delete-log-btn').forEach(btn => btn.style.display = '');
                 saveImageBtn.style.display = '';
                 logSectionStyle.maxHeight = originalMaxHeight;
                 logSectionStyle.overflowY = originalOverflowY;
@@ -582,9 +698,23 @@
         userIdInput.addEventListener('input', () => {
             currentUserId = userIdInput.value.trim();
             localStorage.setItem('lastUserId', currentUserId);
-            loadUserLogs(currentUserId);
+            loadUserLogs(currentUserId, viewingDate); 
         });
         
+        logDatePicker.addEventListener('change', (e) => {
+            viewingDate = e.target.value;
+            updateLogTitle(viewingDate); 
+            loadUserLogs(currentUserId, viewingDate);
+            
+            if (viewingDate !== getTodayDateString()) {
+                resetEditContext();
+                stopTimer();
+                timerTime.textContent = minutesInput.value + ':00';
+            } else {
+                setTimer(minutesInput.value);
+            }
+        });
+
         startBtn.addEventListener('click', startTimer);
         stopBtn.addEventListener('click', stopTimer);
         resetBtn.addEventListener('click', resetTimer);
@@ -604,17 +734,18 @@
 
         // --- 초기 실행 로직 ---
         setTimer(minutesInput.value);
-        setLogTitle();
         
-        // 1. 이전 날짜 기록 초기화 확인 및 실행
-        clearPreviousDayLogs();
+        handleDateChangeOnLoad();
+        const initialDate = getTodayDateString();
+        logDatePicker.value = initialDate;
+        viewingDate = initialDate;
+        updateLogTitle(initialDate);
         
-        // 2. 마지막 사용자 ID로 자동 로드
         const lastUserId = localStorage.getItem('lastUserId');
         if (lastUserId) {
             userIdInput.value = lastUserId;
             currentUserId = lastUserId;
-            loadUserLogs(lastUserId);
+            loadUserLogs(currentUserId, viewingDate);
         }
     </script>
 </body>
