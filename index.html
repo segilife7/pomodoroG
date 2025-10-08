@@ -11,10 +11,18 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap');
         
+        /* 커스텀 컬러 팔레트 */
+        .color-fresh-leaf { background-color: #339551; }
+        .color-basil { background-color: #266533; }
+        .color-lemons { background-color: #E1DC53; }
+        .color-passata { background-color: #F16838; }
+        .hover\:bg-basil:hover { background-color: #266533; }
+        .focus\:border-passata:focus { border-color: #F16838; }
+
         /* 기본 레이아웃 및 반응형 설정 */
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #f3f4f6;
+            background-color: #f3f4f6; /* 밝은 회색 배경 유지 */
             display: flex;
             justify-content: center;
             align-items: center;
@@ -69,106 +77,45 @@
             }
         }
         
-        /* 타이머 및 입력 요소 스타일 */
-        .timer-display {
-            position: relative;
-            width: 250px;
-            height: 250px;
-            margin-bottom: 1.5rem;
-        }
-        .timer-display .circle-bg {
-            fill: none;
-            stroke: #e2e8f0;
-            stroke-width: 10px;
-        }
+        /* 타이머 원 색상 변경 */
         .timer-display .circle-progress {
             fill: none;
-            stroke: #ef4444;
+            stroke: #339551; /* Fresh Leaf */
             stroke-width: 10px;
             stroke-linecap: round;
             transform: rotate(-90deg);
             transform-origin: 50% 50%;
             transition: stroke-dashoffset 0.5s linear;
         }
-        .timer-time-text {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            font-size: 3rem;
-            font-weight: bold;
-            color: #1f2937;
+
+        /* 기록 제목 폰트 크기 조정 (모바일) */
+        .log-header-container h2 {
+            font-size: 1.5rem; /* 기본 폰트 크기 (PC) */
         }
-        .timer-input-group {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            margin-bottom: 1rem;
+        
+        @media (max-width: 767px) {
+            .log-header-container {
+                flex-direction: column; /* 모바일에서 세로 배열 */
+                align-items: flex-start; /* 왼쪽 정렬 */
+                gap: 0.5rem;
+            }
+            .log-header-container h2 {
+                font-size: 1.25rem; /* 나의 시간 기록 폰트 작게 (text-xl) */
+            }
+            #log-date-picker {
+                font-size: 0.875rem; /* 날짜 폰트 더 작게 (text-sm) */
+                max-width: 100%;
+                text-align: left;
+            }
         }
-        .timer-input {
-            width: 100px;
-            text-align: center;
-            font-size: 1.5rem;
-            padding: 0.5rem;
-            border: 2px solid #d1d5db;
-            border-radius: 0.75rem;
-            outline: none;
-            transition: border-color 0.2s;
-        }
-        .timer-input:focus {
-            border-color: #ef4444;
-        }
-        .reflection-input {
-            width: 100%;
-            height: 100px;
-            padding: 0.75rem;
-            border: 2px solid #d1d5db;
-            border-radius: 0.75rem;
-            resize: none;
-            outline: none;
-            margin-top: 1rem;
-            transition: border-color 0.2s;
-        }
-        .reflection-input:focus {
-            border-color: #ef4444;
-        }
-        .log-list-item {
-            background-color: #f9fafb;
-            padding: 1rem;
-            border-radius: 0.75rem;
-            margin-bottom: 1rem;
-            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
-            border: 2px solid transparent; 
-        }
-        .log-list-item.editing {
-            border: 2px solid #3b82f6; 
-            background-color: #eff6ff; 
-        }
-        #save-image-btn {
-             background-color: #3b82f6;
-        }
-        #save-image-btn:hover {
-             background-color: #2563eb;
-        }
-        /* 입력 필드 중앙 정렬 보조 */
+
         .timer-input-group.w-full.max-w-xs.mx-auto label {
             align-self: flex-start;
         }
         
         /* 날짜 선택기 스타일링 */
         #log-date-picker {
-            padding: 0.5rem;
             border: 2px solid #d1d5db;
-            border-radius: 0.5rem;
-            outline: none;
-            cursor: pointer;
-            font-size: 1rem;
-            text-align: center;
-            flex-grow: 1; 
-            max-width: 150px; 
-        }
-        #log-date-picker:focus {
-            border-color: #3b82f6;
         }
 
         /* 기록 헤더 정렬을 위한 스타일 */
@@ -179,38 +126,22 @@
             width: 100%; 
             margin-bottom: 1rem;
         }
+
+        /* 수정 중인 항목 시각적 표시 */
+        .log-list-item.editing {
+            border: 2px solid #266533; /* Basil 색상으로 테두리 변경 */
+            background-color: #f6f4dc40; /* Cream 색상 기반으로 변경 */
+        }
         .log-buttons {
             display: flex;
             gap: 0.5rem; 
             margin-top: 0.5rem;
         }
         .delete-log-btn {
-            background-color: #f87171; 
+            background-color: #F16838; /* Passata */
         }
         .delete-log-btn:hover {
-            background-color: #ef4444; 
-        }
-
-        /* 커스텀 알림 모달 스타일 */
-        .custom-modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.5);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 1000;
-        }
-        .custom-modal-content {
-            background-color: white;
-            padding: 2rem;
-            border-radius: 1rem;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            text-align: center;
-            max-width: 90%;
+            background-color: #C64F25; 
         }
     </style>
 </head>
@@ -232,12 +163,12 @@
                 <!-- 사용자 이름 입력 필드 -->
                 <div class="timer-input-group w-full max-w-xs mx-auto">
                     <label for="user-id" class="text-gray-600 mb-2">사용자 이름 (필수):</label>
-                    <input type="text" id="user-id" placeholder="나만의 닉네임" class="w-full p-2 border-2 border-gray-300 rounded-lg focus:border-red-500 text-left" required>
+                    <input type="text" id="user-id" placeholder="나만의 닉네임" class="w-full p-2 border-2 border-gray-300 rounded-lg focus:border-passata text-left" required>
                 </div>
                 <!-- 활동 내용 입력 필드 -->
                 <div class="timer-input-group w-full max-w-xs mx-auto"> 
                     <label for="activity" class="text-gray-600 mb-2">활동 내용:</label>
-                    <input type="text" id="activity" placeholder="예) 문서 작업" class="w-full p-2 border-2 border-gray-300 rounded-lg focus:border-red-500 text-left">
+                    <input type="text" id="activity" placeholder="예) 문서 작업" class="w-full p-2 border-2 border-gray-300 rounded-lg focus:border-passata text-left">
                 </div>
 
                 <!-- 수정 중 메시지 표시 영역 -->
@@ -246,13 +177,15 @@
                 </p>
                 
                 <div class="flex space-x-4 mt-4 w-full justify-center">
-                    <button id="start-btn" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-6 rounded-xl transition duration-300 transform hover:scale-105 shadow-md">
+                    <!-- 시작 버튼: Basil (#266533) -->
+                    <button id="start-btn" class="color-basil hover:bg-green-700 text-white font-bold py-2 px-6 rounded-xl transition duration-300 transform hover:scale-105 shadow-md">
                         시작
                     </button>
                     <button id="stop-btn" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-6 rounded-xl transition duration-300 transform hover:scale-105 shadow-md">
                         중지
                     </button>
-                    <button id="reset-btn" class="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-6 rounded-xl transition duration-300 transform hover:scale-105 shadow-md">
+                    <!-- 재설정 버튼: Passata (#F16838) -->
+                    <button id="reset-btn" class="color-passata hover:bg-red-700 text-white font-bold py-2 px-6 rounded-xl transition duration-300 transform hover:scale-105 shadow-md">
                         재설정
                     </button>
                 </div>
@@ -265,9 +198,10 @@
             <!-- 성찰 입력 영역 -->
             <div id="reflection-area" class="w-full hidden">
                 <label for="reflection" class="text-gray-600 mt-4 mb-2">활동 성찰:</label>
-                <textarea id="reflection" class="reflection-input" placeholder="이 세션 동안 어떤 점을 잘했고, 아쉬운 점은 무엇인가요?"></textarea>
+                <textarea id="reflection" class="reflection-input focus:border-passata" placeholder="이 세션 동안 어떤 점을 잘했고, 아쉬운 점은 무엇인가요?"></textarea>
                 
-                <button id="complete-reflection-btn" class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-6 rounded-xl transition duration-300 transform hover:scale-105 shadow-md mt-4">
+                <!-- 성찰 완료 버튼: Fresh Leaf (#339551) -->
+                <button id="complete-reflection-btn" class="color-fresh-leaf hover:bg-green-700 text-white font-bold py-2 px-6 rounded-xl transition duration-300 transform hover:scale-105 shadow-md mt-4">
                     성찰 완료
                 </button>
             </div>
@@ -275,6 +209,7 @@
         
         <!-- Log Section: 이미지 캡처 대상 -->
         <div class="log-section" id="log-section">
+            <!-- UI 수정 반영: 제목과 날짜 선택기를 세로로 배치 (모바일) -->
             <div class="log-header-container">
                 <h2 id="log-title" class="text-2xl font-bold text-gray-800">나의 시간 기록</h2>
                 <input type="date" id="log-date-picker" class="text-gray-700" title="기록을 볼 날짜를 선택하세요">
@@ -283,17 +218,17 @@
                 <!-- Log entries will be added here -->
             </ul>
             
-            <!-- 최종 이미지 저장 버튼 -->
-            <button id="save-image-btn" class="w-full text-white font-bold py-2 px-6 rounded-xl transition duration-300 transform hover:scale-105 shadow-md mt-4">
+            <!-- 최종 이미지 저장 버튼: Basil (#266533) -->
+            <button id="save-image-btn" class="color-basil hover:bg-green-700 text-white font-bold py-2 px-6 rounded-xl transition duration-300 transform hover:scale-105 shadow-md mt-4">
                 기록 전체 이미지로 저장
             </button>
         </div>
     </div>
 
     <script>
-        // 🚨 오디오 URL을 상대 경로로 설정 (index.html과 같은 경로)
+        // 🚨 오디오 URL (index.html과 같은 경로)
         const AUDIO_URL = 'timeIsUp.MP3';
-        let timeUpSound = null; // Audio 객체를 나중에 생성하기 위해 null로 초기화
+        let timeUpSound = null;
 
         const minutesInput = document.getElementById('minutes');
         const activityInput = document.getElementById('activity');
@@ -328,9 +263,8 @@
         // --- 오디오 제어 헬퍼 ---
         function initializeAudio() {
             if (!timeUpSound) {
-                // 오디오 URL을 사용하여 Audio 객체 생성
                 timeUpSound = new Audio(AUDIO_URL);
-                timeUpSound.loop = true; // 경고음이 계속 반복되도록 설정
+                timeUpSound.loop = true;
             }
         }
         
@@ -360,7 +294,7 @@
             const confirmBtn = modalContent.querySelector('#modal-confirm-btn');
             
             confirmBtn.onclick = () => {
-                stopAudio(); // 🚨 확인 버튼 클릭 시 오디오 중지
+                stopAudio();
                 modalOverlay.remove();
                 onConfirm(); 
             };
@@ -429,7 +363,7 @@
             
             const buttons = isToday ? `
                 <div class="log-buttons">
-                    <button data-log-id="${logData.id}" class="edit-log-btn bg-yellow-500 hover:bg-yellow-600 text-white text-xs py-1 px-3 rounded-lg">
+                    <button data-log-id="${logData.id}" class="edit-log-btn color-lemons hover:bg-yellow-600 text-black text-xs py-1 px-3 rounded-lg">
                         기록 수정
                     </button>
                     <button data-log-id="${logData.id}" class="delete-log-btn text-white text-xs py-1 px-3 rounded-lg">
@@ -471,7 +405,6 @@
                 const allLogs = getAllLogs();
                 const lastUserId = localStorage.getItem('lastUserId');
                 
-                // 기존 데이터를 백업 후 clear (Local Storage 크기 관리를 위함)
                 localStorage.clear();
                 
                 localStorage.setItem('allPomodoroLogs', JSON.stringify(allLogs)); 
@@ -710,8 +643,6 @@
                 return;
             }
             
-            // 캡처 전, 모든 버튼과 스크롤을 임시로 숨기거나 해제합니다.
-            
             logSection.querySelectorAll('.edit-log-btn, .delete-log-btn').forEach(btn => btn.style.display = 'none');
             saveImageBtn.style.display = 'none';
             
@@ -734,7 +665,6 @@
                 useCORS: true,
                 backgroundColor: '#ffffff'
             }).then(canvas => {
-                // 원래 상태로 복구
                 logSection.querySelectorAll('.edit-log-btn, .delete-log-btn').forEach(btn => btn.style.display = '');
                 saveImageBtn.style.display = '';
                 
@@ -755,7 +685,6 @@
                 
                 customAlert('기록 전체가 이미지 파일로 저장되었습니다!');
             }).catch(error => {
-                // 오류 발생 시에도 원래 상태로 복구
                 logSection.querySelectorAll('.edit-log-btn, .delete-log-btn').forEach(btn => btn.style.display = '');
                 saveImageBtn.style.display = '';
                 logSectionStyle.maxHeight = originalMaxHeight;
