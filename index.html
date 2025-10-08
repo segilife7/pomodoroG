@@ -291,9 +291,9 @@
     </div>
 
     <script>
-        // 🔔 오디오 설정: GitHub raw 파일 URL
-        const AUDIO_URL = 'https://raw.githubusercontent.com/segilife7/pomodoroG/main/timeIsUp.MP3';
-        const timeUpSound = new Audio(AUDIO_URL);
+        // 🚨 오디오 URL을 상대 경로로 설정 (index.html과 같은 경로)
+        const AUDIO_URL = 'timeIsUp.MP3';
+        let timeUpSound = null; // Audio 객체를 나중에 생성하기 위해 null로 초기화
 
         const minutesInput = document.getElementById('minutes');
         const activityInput = document.getElementById('activity');
@@ -325,9 +325,24 @@
         const radius = 45;
         const circumference = 2 * Math.PI * radius;
 
-        // --- 커스텀 알림 함수 ---
+        // --- 오디오 제어 헬퍼 ---
+        function initializeAudio() {
+            if (!timeUpSound) {
+                // 오디오 URL을 사용하여 Audio 객체 생성
+                timeUpSound = new Audio(AUDIO_URL);
+                timeUpSound.loop = true; // 경고음이 계속 반복되도록 설정
+            }
+        }
+        
+        function stopAudio() {
+            if (timeUpSound) {
+                timeUpSound.pause();
+                timeUpSound.currentTime = 0;
+            }
+        }
+
+        // --- 커스텀 알림 함수 (오디오 제어 포함) ---
         function customAlert(message, onConfirm = () => {}) {
-            // 기존 모달이 있다면 제거
             const existingModal = document.querySelector('.custom-modal-overlay');
             if (existingModal) existingModal.remove();
 
@@ -345,10 +360,9 @@
             const confirmBtn = modalContent.querySelector('#modal-confirm-btn');
             
             confirmBtn.onclick = () => {
-                timeUpSound.pause(); // 🚨 오디오 중지
-                timeUpSound.currentTime = 0; // 오디오 재생 위치 초기화
+                stopAudio(); // 🚨 확인 버튼 클릭 시 오디오 중지
                 modalOverlay.remove();
-                onConfirm(); // 콜백 함수 실행 (선택 사항)
+                onConfirm(); 
             };
 
             modalOverlay.appendChild(modalContent);
@@ -391,7 +405,6 @@
             loadUserLogs(currentUserId, viewingDate);
         }
 
-        // 선택된 날짜의 기록만 로드합니다.
         function loadUserLogs(userId, dateString) {
             logList.innerHTML = '';
             if (!userId) return;
@@ -455,13 +468,12 @@
             const lastAccessedDate = localStorage.getItem('lastAccessedDate');
             
             if (lastAccessedDate && lastAccessedDate !== todayDate) {
-                // 이전 기록은 유지하고, lastUserId와 lastAccessedDate만 보존
                 const allLogs = getAllLogs();
                 const lastUserId = localStorage.getItem('lastUserId');
                 
+                // 기존 데이터를 백업 후 clear (Local Storage 크기 관리를 위함)
                 localStorage.clear();
                 
-                // 모든 기록 복원 (날짜와 무관하게 모든 기록은 로컬에 유지)
                 localStorage.setItem('allPomodoroLogs', JSON.stringify(allLogs)); 
                 if (lastUserId) {
                     localStorage.setItem('lastUserId', lastUserId);
@@ -526,21 +538,21 @@
                 setTimer(minutesInput.value);
             }
             
-            // 오디오 권한 확보 (브라우저 정책 우회)
+            // 오디오 초기화 및 권한 확보 시도
+            initializeAudio(); 
             timeUpSound.play().then(() => {
                 timeUpSound.pause();
                 timeUpSound.currentTime = 0;
             }).catch(e => {
-                console.warn("Autoplay was prevented by browser, sound might not work on timer completion.", e);
+                console.warn("Autoplay blocked. User interaction required for sound.", e);
             });
-
+            
             timer = setInterval(() => {
                 timeRemaining--;
                 updateDisplay();
                 if (timeRemaining <= 0) {
                     clearInterval(timer);
                     
-                    // 타이머 종료 시: 임시 데이터 저장
                     pendingLogData = {
                         id: Date.now(),
                         userId: currentUserId,
@@ -555,10 +567,12 @@
                     
                     activityInput.value = ''; 
 
-                    // 🚨 소리 재생 및 커스텀 알림 호출
-                    timeUpSound.play(); 
-                    customAlert('시간이 종료되었습니다! 활동 성찰을 기록하고 [성찰 완료] 버튼을 눌러주세요.');
+                    // 🚨 소리 재생 시작
+                    if (timeUpSound) {
+                        timeUpSound.play().catch(e => console.error("Sound play failed:", e));
+                    }
                     
+                    customAlert('시간이 종료되었습니다! 활동 성찰을 기록하고 [성찰 완료] 버튼을 눌러주세요.');
                     reflectionArea.classList.remove('hidden');
                 }
             }, 1000);
@@ -566,12 +580,11 @@
 
         function stopTimer() {
             clearInterval(timer);
+            stopAudio();
         }
 
         function resetTimer() {
             stopTimer();
-            timeUpSound.pause(); // 재설정 시 소리 중지
-            timeUpSound.currentTime = 0;
             setTimer(minutesInput.value);
             resetEditContext();
             activityInput.value = '';
@@ -662,7 +675,6 @@
                 if (logToUpdate) {
                     logToUpdate.reflection = reflectionText;
                     logToUpdate.activity = currentActivityValue; 
-                    // 로컬 스토리지에 직접 업데이트
                     const index = allLogs.findIndex(log => log.id === logToUpdate.id);
                     if (index > -1) {
                          allLogs[index] = logToUpdate;
@@ -698,6 +710,8 @@
                 return;
             }
             
+            // 캡처 전, 모든 버튼과 스크롤을 임시로 숨기거나 해제합니다.
+            
             logSection.querySelectorAll('.edit-log-btn, .delete-log-btn').forEach(btn => btn.style.display = 'none');
             saveImageBtn.style.display = 'none';
             
@@ -720,6 +734,7 @@
                 useCORS: true,
                 backgroundColor: '#ffffff'
             }).then(canvas => {
+                // 원래 상태로 복구
                 logSection.querySelectorAll('.edit-log-btn, .delete-log-btn').forEach(btn => btn.style.display = '');
                 saveImageBtn.style.display = '';
                 
@@ -740,6 +755,7 @@
                 
                 customAlert('기록 전체가 이미지 파일로 저장되었습니다!');
             }).catch(error => {
+                // 오류 발생 시에도 원래 상태로 복구
                 logSection.querySelectorAll('.edit-log-btn, .delete-log-btn').forEach(btn => btn.style.display = '');
                 saveImageBtn.style.display = '';
                 logSectionStyle.maxHeight = originalMaxHeight;
@@ -765,7 +781,6 @@
             updateLogTitle(viewingDate); 
             loadUserLogs(currentUserId, viewingDate);
             
-            // 오늘 날짜가 아니면 타이머 섹션 초기화 (과거 기록을 건드리지 않도록)
             if (viewingDate !== getTodayDateString()) {
                 resetEditContext();
                 stopTimer();
@@ -798,18 +813,19 @@
         handleDateChangeOnLoad();
         const initialDate = getTodayDateString();
         
-        // 1. 날짜 선택기 필드를 오늘 날짜로 설정
         logDatePicker.value = initialDate;
         viewingDate = initialDate;
         updateLogTitle(initialDate);
         
-        // 2. 마지막 사용자 ID로 자동 로드
         const lastUserId = localStorage.getItem('lastUserId');
         if (lastUserId) {
             userIdInput.value = lastUserId;
             currentUserId = lastUserId;
             loadUserLogs(currentUserId, viewingDate);
         }
+
+        // 초기 오디오 객체 생성
+        initializeAudio();
     </script>
 </body>
 </html>
